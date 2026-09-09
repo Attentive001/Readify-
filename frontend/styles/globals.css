@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+body { background: #F4EEDD; }
+::selection { background: #1C2333; color: #F4EEDD; }
+.book-cover { min-height: 210px; }
