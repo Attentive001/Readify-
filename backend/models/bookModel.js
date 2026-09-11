@@ -87,7 +87,7 @@ async function createBook(data) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)
      RETURNING id`,
     [
-      data.title, data.description, data.authorId, data.languageId,
+      data.title, data.description, data.authorName, data.languageId,
       data.publishedYear, data.isbn, data.coverUrl, data.sourceUrl,
       data.rightsStatus || "unknown",
     ]
@@ -101,7 +101,71 @@ async function createBookWithChapters(bookData, chapters) {
   try {
     await client.query("BEGIN");
 
-    // Create the book
+    // --------------------------------------------------
+    // 1. FIND OR CREATE AUTHOR
+    // --------------------------------------------------
+
+    let authorId = null;
+
+    if (bookData.authorName) {
+      const authorResult = await client.query(
+        `SELECT id
+         FROM authors
+         WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+         LIMIT 1`,
+        [bookData.authorName]
+      );
+
+      if (authorResult.rows.length > 0) {
+        authorId = authorResult.rows[0].id;
+      } else {
+        const newAuthor = await client.query(
+          `INSERT INTO authors (name)
+           VALUES ($1)
+           RETURNING id`,
+          [bookData.authorName.trim()]
+        );
+
+        authorId = newAuthor.rows[0].id;
+      }
+    }
+
+    // --------------------------------------------------
+    // 2. FIND OR CREATE LANGUAGE
+    // --------------------------------------------------
+
+    let languageId = null;
+
+    if (bookData.languageCode) {
+      const languageResult = await client.query(
+        `SELECT id
+         FROM languages
+         WHERE LOWER(TRIM(code)) = LOWER(TRIM($1))
+         LIMIT 1`,
+        [bookData.languageCode]
+      );
+
+      if (languageResult.rows.length > 0) {
+        languageId = languageResult.rows[0].id;
+      } else {
+        const newLanguage = await client.query(
+          `INSERT INTO languages (code, name)
+           VALUES ($1, $2)
+           RETURNING id`,
+          [
+            bookData.languageCode.trim(),
+            (bookData.languageName || bookData.languageCode).trim(),
+          ]
+        );
+
+        languageId = newLanguage.rows[0].id;
+      }
+    }
+
+    // --------------------------------------------------
+    // 3. CREATE BOOK
+    // --------------------------------------------------
+
     const bookResult = await client.query(
       `INSERT INTO books
         (
@@ -120,8 +184,8 @@ async function createBookWithChapters(bookData, chapters) {
       [
         bookData.title,
         bookData.description || null,
-        bookData.authorId || null,
-        bookData.languageId || null,
+        authorId,
+        languageId,
         bookData.publishedYear || null,
         bookData.isbn || null,
         bookData.coverUrl || null,
@@ -132,7 +196,10 @@ async function createBookWithChapters(bookData, chapters) {
 
     const bookId = bookResult.rows[0].id;
 
-    // Save every chapter
+    // --------------------------------------------------
+    // 4. SAVE ALL CHAPTERS
+    // --------------------------------------------------
+
     for (const chapter of chapters) {
       await client.query(
         `INSERT INTO book_chapters
@@ -146,6 +213,10 @@ async function createBookWithChapters(bookData, chapters) {
         ]
       );
     }
+
+    // --------------------------------------------------
+    // 5. FINISH TRANSACTION
+    // --------------------------------------------------
 
     await client.query("COMMIT");
 

@@ -14,10 +14,10 @@ async function findAuthorById(id) {
   return rows[0] || null;
 }
 
-async function listBooksByAuthor(authorId) {
+async function listBooksByAuthor(authorName) {
   const { rows } = await pool.query(
     `SELECT id, title, cover_url, published_year FROM books WHERE author_id = $1 ORDER BY published_year ASC`,
-    [authorId]
+    [authorName]
   );
   return rows;
 }

@@ -88,8 +88,8 @@ async function createBook(req, res, next) {
  *
  * book          -> PDF / EPUB / TXT
  * title         -> Book title
- * description   -> Description
- * authorId      -> Author UUID
+ *authorName description   -> Description
+ *       -> Author UUID
  * languageId    -> Language UUID
  * publishedYear -> Published year
  * isbn          -> ISBN
@@ -109,7 +109,7 @@ async function uploadBook(req, res, next) {
 
     uploadedFilePath = req.file.path;
 
-    // Parse the uploaded PDF / EPUB / TXT
+    // Parse PDF / EPUB / TXT
     const chapters = await parseBook(uploadedFilePath);
 
     if (!chapters || chapters.length === 0) {
@@ -118,20 +118,29 @@ async function uploadBook(req, res, next) {
       });
     }
 
-    // Create the book and all its chapters in one database transaction
+    // IMPORTANT:
+    // authorName and languageCode come from the upload form.
+    // The model will resolve them to UUIDs.
     const book = await bookModel.createBookWithChapters(
       {
         title: req.body.title || req.file.originalname,
-        description: req.body.description,
-        authorId: req.body.authorId || null,
-        languageId: req.body.languageId || null,
+        description: req.body.description || null,
+
+        authorName: req.body.authorName || null,
+
+        languageCode: req.body.languageCode || null,
+        languageName: req.body.languageName || null,
+
         publishedYear: req.body.publishedYear
           ? Number(req.body.publishedYear)
           : null,
+
         isbn: req.body.isbn || null,
         coverUrl: req.body.coverUrl || null,
         sourceUrl: req.body.sourceUrl || null,
         rightsStatus: req.body.rightsStatus || "unknown",
+
+        categories: req.body.categories || "",
       },
       chapters
     );
@@ -148,10 +157,9 @@ async function uploadBook(req, res, next) {
       },
     });
   } catch (err) {
+    console.error("UPLOAD BOOK ERROR:", err);
     next(err);
   } finally {
-    // Remove temporary uploaded file after processing.
-    // The actual chapter content is already stored in PostgreSQL.
     if (uploadedFilePath) {
       try {
         await fs.unlink(uploadedFilePath);

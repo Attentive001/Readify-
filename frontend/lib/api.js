@@ -23,6 +23,9 @@ async function request(path, options = {}) {
 
 export const api = {
   // Books
+  getBooks: (params = {}) =>
+  request(`/books?${new URLSearchParams(params)}`),
+  
   getFeatured: () => request("/books/featured"),
 
   getPopular: () => request("/books/popular"),

@@ -51,7 +51,7 @@ async function uploadBook({ metadata, file }) {
   try {
     await client.query("BEGIN");
 
-    const authorId = metadata.author
+    const authorName = metadata.author
       ? await findOrCreateAuthor(client, metadata.author)
       : null;
     const languageId = await findOrCreateLanguage(client, metadata.language || "en");
@@ -65,7 +65,7 @@ async function uploadBook({ metadata, file }) {
       [
         metadata.title.trim(),
         metadata.description?.trim() || null,
-        authorId,
+        authorName,
         languageId,
         metadata.publishedYear ? Number(metadata.publishedYear) : null,
         metadata.isbn?.trim() || null,
