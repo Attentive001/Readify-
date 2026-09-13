@@ -25,7 +25,7 @@ export const api = {
   // Books
   getBooks: (params = {}) =>
   request(`/books?${new URLSearchParams(params)}`),
-  
+
   getFeatured: () => request("/books/featured"),
 
   getPopular: () => request("/books/popular"),
@@ -45,9 +45,9 @@ export const api = {
   getCategories: () =>
     request("/categories"),
 
-  getCategoryBooks: (slug) =>
-    request(`/categories/${slug}/books`),
-
+  getCategoryBooks: async (slug) => {
+  return request(`/categories/${slug}/books`);
+},
   // Auth
   login: (email, password) =>
     request("/auth/login", {
@@ -67,6 +67,77 @@ export const api = {
         displayName,
       }),
     }),
+// logout
+  logout: () => {
+    localStorage.removeItem("readify_token");
+    localStorage.removeItem("readify_user");
+  },
+// getprofile
+  getProfile: (token) =>
+    request("/auth/profile", {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }),
+getProgress: async (bookId) => {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("readify_token")
+      : null;
+
+  return request(`/books/${bookId}/progress`, {
+    method: "GET",
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {},
+  });
+},
+
+saveProgress: async (bookId, percent, location) => {
+  const token =
+    typeof window !== "undefined"
+      ? localStorage.getItem("readify_token")
+      : null;
+
+  if (!token) {
+    return null;
+  }
+
+  return request(`/books/${bookId}/progress`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      percent,
+      location,
+    }),
+  });
+},
+search: async ({
+  q = "",
+  category = "",
+  language = "",
+  year = "",
+  page = 1,
+  pageSize = 20,
+} = {}) => {
+  const params = new URLSearchParams();
+
+  if (q) params.set("q", q);
+  if (category) params.set("category", category);
+  if (language) params.set("language", language);
+  if (year) params.set("year", year);
+
+  params.set("page", String(page));
+  params.set("pageSize", String(pageSize));
+
+  return request(
+    `/search?${params.toString()}`
+  );
+},
 
   // Upload book
   uploadBook: async (formData) => {

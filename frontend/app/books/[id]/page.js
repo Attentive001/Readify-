@@ -1,15 +1,20 @@
 import Link from "next/link";
 import { api } from "../../../lib/api";
-import { findMockBook } from "../../../lib/mockData";
 import BookCard from "../../../components/BookCard";
+import AddToLibraryButton from "../../../components/AddToLibraryButton";
 
 export default async function BookPage({ params }) {
-  let book = findMockBook(params.id);
+  let book = null;
 
-  try {
-    const data = await api.getBook(params.id);
-    if (data.book) book = data.book;
-  } catch {}
+try {
+  const data = await api.getBook(params.id);
+
+  if (data?.book) {
+    book = data.book;
+  }
+} catch (error) {
+  console.error("Failed to load book:", error);
+}
 
   if (!book) {
     return (
@@ -79,9 +84,7 @@ export default async function BookPage({ params }) {
               Read now →
             </Link>
 
-            <button className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold hover:bg-white/50">
-              ♡ Save to library
-            </button>
+            <AddToLibraryButton bookId={book.id} />
 
             <button className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold hover:bg-white/50">
               ▶ Listen

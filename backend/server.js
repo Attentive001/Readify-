@@ -10,6 +10,7 @@ const categoryRoutes = require("./routes/categoryRoutes");
 const searchRoutes = require("./routes/searchRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
 const readingRoutes = require("./routes/readingRoutes");
+const progressRoutes = require("./routes/progressRoutes");
 const chapterRoutes = require("./routes/chapterRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
@@ -37,6 +38,7 @@ v1.use("/categories", categoryRoutes);
 v1.use("/search", searchRoutes);
 v1.use("/library", libraryRoutes);
 v1.use("/books", readingRoutes); // adds /:id/progress and /:id/bookmarks under /books
+v1.use("/books", progressRoutes);
 app.use("/api/v1", v1);
 
 app.use(notFound);

@@ -1,14 +1,189 @@
 "use client";
-import { useMemo, useState } from "react";
+
+import { useState } from "react";
 import { api } from "../../lib/api";
-import { mockBooks } from "../../lib/mockData";
 import BookCard from "../../components/BookCard";
 import SearchBar from "../../components/SearchBar";
 
+const categories = [
+  "All",
+  "Self-Development",
+  "Business",
+  "Technology",
+  "Science",
+  "History",
+  "Literature",
+  "Philosophy",
+  "Education",
+];
+
 export default function SearchPage() {
-  const [q, setQ] = useState(""); const [results, setResults] = useState([]); const [searched, setSearched] = useState(false); const [category, setCategory] = useState("All");
-  async function runSearch(e) { e.preventDefault(); const term = q.trim(); setSearched(true); try { const data = await api.search({ q: term }); setResults(data.results?.length ? data.results : filterMock(term)); } catch { setResults(filterMock(term)); } }
-  function filterMock(term) { const t = term.toLowerCase(); return mockBooks.filter(b => !t || `${b.title} ${b.author_name} ${b.category}`.toLowerCase().includes(t)); }
-  const shown = useMemo(() => category === "All" ? results : results.filter(b => b.category === category), [results, category]);
-  return <main className="max-w-7xl mx-auto px-5 lg:px-8 py-12"><div className="max-w-2xl"><p className="text-xs uppercase tracking-[.2em] text-gold font-bold">Find your next book</p><h1 className="font-display text-4xl sm:text-5xl font-bold mt-2">Search the library</h1><p className="text-ink/60 mt-3">Search by title, author, ISBN, category, or keyword.</p></div><div className="mt-8 max-w-3xl"><SearchBar value={q} onChange={setQ} onSubmit={runSearch} large/></div><div className="mt-8 flex flex-wrap gap-2">{["All", "Self-Development", "Business", "Technology", "Science", "History"].map(c => <button key={c} onClick={() => setCategory(c)} className={`rounded-full px-4 py-2 text-xs font-semibold border ${category === c ? "bg-ink text-parchment border-ink" : "border-ink/15 hover:bg-white/50"}`}>{c}</button>)}</div>{searched && <div className="mt-10"><div className="flex justify-between items-center mb-5"><h2 className="font-display text-2xl font-bold">{shown.length} result{shown.length === 1 ? "" : "s"}</h2></div>{shown.length ? <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-5">{shown.map(b => <BookCard key={b.id} book={b}/>)}</div> : <div className="rounded-2xl border border-ink/10 bg-white/50 p-10 text-center"><p className="font-display text-xl font-bold">No books found</p><p className="text-sm text-ink/55 mt-2">Try another title, author, or keyword.</p></div>}</div>}</main>;
+  const [q, setQ] = useState("");
+  const [results, setResults] = useState([]);
+  const [category, setCategory] = useState("All");
+
+  const [searched, setSearched] =
+    useState(false);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  async function runSearch(e) {
+    e.preventDefault();
+
+    setSearched(true);
+    setLoading(true);
+    setError("");
+
+    try {
+      const data = await api.search({
+        q: q.trim(),
+        category:
+          category === "All"
+            ? ""
+            : category,
+        page: 1,
+        pageSize: 100,
+      });
+
+      setResults(
+        Array.isArray(data?.results)
+          ? data.results
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "Search error:",
+        err
+      );
+
+      setResults([]);
+
+      setError(
+        err.message ||
+          "Unable to search the library."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto max-w-7xl px-5 py-12 lg:px-8">
+
+      {/* Header */}
+      <div className="max-w-2xl">
+        <p className="text-xs font-bold uppercase tracking-[.2em] text-gold">
+          Find your next book
+        </p>
+
+        <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
+          Search the library
+        </h1>
+
+        <p className="mt-3 text-ink/60">
+          Search by title, author, ISBN,
+          category, or keyword.
+        </p>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mt-8 max-w-3xl">
+        <SearchBar
+          value={q}
+          onChange={setQ}
+          onSubmit={runSearch}
+          large
+        />
+      </div>
+
+      {/* Categories */}
+      <div className="mt-8 flex flex-wrap gap-2">
+        {categories.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => {
+              setCategory(item);
+            }}
+            className={`rounded-full border px-4 py-2 text-xs font-semibold ${
+              category === item
+                ? "border-ink bg-ink text-parchment"
+                : "border-ink/15 hover:bg-white/50"
+            }`}
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+
+      {/* Results */}
+      {searched && (
+        <section className="mt-10">
+
+          <div className="mb-5">
+            <h2 className="font-display text-2xl font-bold">
+              {loading
+                ? "Searching..."
+                : `${results.length} result${
+                    results.length === 1
+                      ? ""
+                      : "s"
+                  }`}
+            </h2>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* Loading */}
+          {loading && (
+            <div className="rounded-2xl border border-ink/10 bg-white/50 p-10 text-center">
+              <p className="text-sm text-ink/60">
+                Searching the Readify library...
+              </p>
+            </div>
+          )}
+
+          {/* Results */}
+          {!loading &&
+            !error &&
+            results.length > 0 && (
+              <div className="grid grid-cols-2 gap-5 sm:grid-cols-4 lg:grid-cols-6">
+                {results.map((book) => (
+                  <BookCard
+                    key={book.id}
+                    book={book}
+                  />
+                ))}
+              </div>
+            )}
+
+          {/* No results */}
+          {!loading &&
+            !error &&
+            results.length === 0 && (
+              <div className="rounded-2xl border border-ink/10 bg-white/50 p-10 text-center">
+                <p className="font-display text-xl font-bold">
+                  No books found
+                </p>
+
+                <p className="mt-2 text-sm text-ink/55">
+                  Try another title, author,
+                  ISBN, or keyword.
+                </p>
+              </div>
+            )}
+
+        </section>
+      )}
+    </main>
+  );
 }

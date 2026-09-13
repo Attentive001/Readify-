@@ -20,36 +20,197 @@ const GROUP_BY = `GROUP BY b.id, a.id, l.id`;
 
 // Supports title/author/isbn/category/keyword search plus language and year filters,
 // with cursor-free offset pagination (swap for keyset pagination once the catalog is large).
-async function searchBooks({ q, categorySlug, languageCode, page = 1, pageSize = 20 }) {
-  const clauses = [];
-  const params = [];
-
-  if (q) {
-    params.push(q);
-    clauses.push(`(b.search_vector @@ plainto_tsquery('english', $${params.length})
-      OR a.name ILIKE '%' || $${params.length} || '%'
-      OR b.isbn ILIKE '%' || $${params.length} || '%')`);
-  }
-  if (categorySlug) {
-    params.push(categorySlug);
-    clauses.push(`c.slug = $${params.length}`);
-  }
-  if (languageCode) {
-    params.push(languageCode);
-    clauses.push(`l.code = $${params.length}`);
-  }
-
-  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  const offset = (page - 1) * pageSize;
-  params.push(pageSize, offset);
-
-  const { rows } = await pool.query(
-    `${BASE_SELECT} ${where} ${GROUP_BY}
-     ORDER BY b.created_at DESC
-     LIMIT $${params.length - 1} OFFSET $${params.length}`,
-    params
+async function searchBooks({
+  q = "",
+  categorySlug = null,
+  languageCode = null,
+  page = 1,
+  pageSize = 20,
+}) {
+  const safePage = Math.max(1, Number(page) || 1);
+  const safePageSize = Math.min(
+    100,
+    Math.max(1, Number(pageSize) || 20)
   );
-  return rows;
+
+  const offset = (safePage - 1) * safePageSize;
+
+  const values = [];
+  const conditions = [];
+
+  /*
+   * Search by:
+   * - title
+   * - author
+   * - ISBN
+   * - description
+   * - category
+   */
+  if (q && q.trim()) {
+    values.push(`%${q.trim()}%`);
+
+    const index = values.length;
+
+    conditions.push(`
+      (
+        b.title ILIKE $${index}
+        OR a.name ILIKE $${index}
+        OR b.isbn ILIKE $${index}
+        OR b.description ILIKE $${index}
+        OR EXISTS (
+          SELECT 1
+          FROM book_categories bc_search
+          JOIN categories c_search
+            ON c_search.id = bc_search.category_id
+          WHERE bc_search.book_id = b.id
+            AND c_search.name ILIKE $${index}
+        )
+      )
+    `);
+  }
+
+  /*
+   * Filter by category
+   */
+  if (categorySlug) {
+    values.push(categorySlug);
+
+    const index = values.length;
+
+    conditions.push(`
+      EXISTS (
+        SELECT 1
+        FROM book_categories bc_category
+        JOIN categories c_category
+          ON c_category.id = bc_category.category_id
+        WHERE bc_category.book_id = b.id
+          AND c_category.slug = $${index}
+      )
+    `);
+  }
+
+  /*
+   * Filter by language
+   */
+  if (languageCode) {
+    values.push(languageCode);
+
+    const index = values.length;
+
+    conditions.push(`
+      l.code = $${index}
+    `);
+  }
+
+  const whereClause =
+    conditions.length > 0
+      ? `WHERE ${conditions.join(" AND ")}`
+      : "";
+
+  /*
+   * Count results
+   */
+  const countQuery = `
+    SELECT COUNT(*)::int AS total
+    FROM books b
+    LEFT JOIN authors a
+      ON a.id = b.author_id
+    LEFT JOIN languages l
+      ON l.id = b.language_id
+    ${whereClause}
+  `;
+
+  const countResult = await pool.query(
+    countQuery,
+    values
+  );
+
+  const total = countResult.rows[0]?.total || 0;
+
+  /*
+   * Get books
+   *
+   * IMPORTANT:
+   * Categories are loaded using a correlated
+   * subquery instead of GROUP BY.
+   *
+   * This prevents the PostgreSQL GROUP BY error.
+   */
+  const dataValues = [...values];
+
+  dataValues.push(safePageSize);
+  const limitIndex = dataValues.length;
+
+  dataValues.push(offset);
+  const offsetIndex = dataValues.length;
+
+  const dataQuery = `
+    SELECT
+      b.id,
+      b.title,
+      b.description,
+      b.published_year,
+      b.isbn,
+      b.cover_url,
+      b.rights_status,
+      b.is_featured,
+      b.is_popular,
+      b.created_at,
+
+      a.id AS author_id,
+      a.name AS author_name,
+
+      l.code AS language_code,
+      l.name AS language_name,
+
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'id', c.id,
+              'name', c.name,
+              'slug', c.slug
+            )
+            ORDER BY c.name
+          )
+          FROM book_categories bc
+          JOIN categories c
+            ON c.id = bc.category_id
+          WHERE bc.book_id = b.id
+        ),
+        '[]'::json
+      ) AS categories
+
+    FROM books b
+
+    LEFT JOIN authors a
+      ON a.id = b.author_id
+
+    LEFT JOIN languages l
+      ON l.id = b.language_id
+
+    ${whereClause}
+
+    ORDER BY b.title ASC
+
+    LIMIT $${limitIndex}
+    OFFSET $${offsetIndex}
+  `;
+
+  const result = await pool.query(
+    dataQuery,
+    dataValues
+  );
+
+  return {
+    books: result.rows,
+    total,
+    page: safePage,
+    pageSize: safePageSize,
+    totalPages: Math.ceil(
+      total / safePageSize
+    ),
+  };
 }
 
 async function findBookById(id) {
@@ -101,19 +262,18 @@ async function createBookWithChapters(bookData, chapters) {
   try {
     await client.query("BEGIN");
 
-    // --------------------------------------------------
-    // 1. FIND OR CREATE AUTHOR
-    // --------------------------------------------------
-
+    // =========================
+    // 1. FIND / CREATE AUTHOR
+    // =========================
     let authorId = null;
 
     if (bookData.authorName) {
       const authorResult = await client.query(
         `SELECT id
          FROM authors
-         WHERE LOWER(TRIM(name)) = LOWER(TRIM($1))
+         WHERE LOWER(name) = LOWER($1)
          LIMIT 1`,
-        [bookData.authorName]
+        [bookData.authorName.trim()]
       );
 
       if (authorResult.rows.length > 0) {
@@ -130,19 +290,18 @@ async function createBookWithChapters(bookData, chapters) {
       }
     }
 
-    // --------------------------------------------------
-    // 2. FIND OR CREATE LANGUAGE
-    // --------------------------------------------------
-
+    // =========================
+    // 2. FIND / CREATE LANGUAGE
+    // =========================
     let languageId = null;
 
-    if (bookData.languageCode) {
+    if (bookData.languageCode && bookData.languageName) {
       const languageResult = await client.query(
         `SELECT id
          FROM languages
-         WHERE LOWER(TRIM(code)) = LOWER(TRIM($1))
+         WHERE LOWER(code) = LOWER($1)
          LIMIT 1`,
-        [bookData.languageCode]
+        [bookData.languageCode.trim()]
       );
 
       if (languageResult.rows.length > 0) {
@@ -154,7 +313,7 @@ async function createBookWithChapters(bookData, chapters) {
            RETURNING id`,
           [
             bookData.languageCode.trim(),
-            (bookData.languageName || bookData.languageCode).trim(),
+            bookData.languageName.trim(),
           ]
         );
 
@@ -162,10 +321,9 @@ async function createBookWithChapters(bookData, chapters) {
       }
     }
 
-    // --------------------------------------------------
+    // =========================
     // 3. CREATE BOOK
-    // --------------------------------------------------
-
+    // =========================
     const bookResult = await client.query(
       `INSERT INTO books
         (
@@ -196,10 +354,62 @@ async function createBookWithChapters(bookData, chapters) {
 
     const bookId = bookResult.rows[0].id;
 
-    // --------------------------------------------------
-    // 4. SAVE ALL CHAPTERS
-    // --------------------------------------------------
+    // =========================
+    // 4. SAVE CATEGORIES
+    // =========================
+    if (bookData.categories) {
+      const categoryNames = bookData.categories
+        .split(",")
+        .map((name) => name.trim())
+        .filter(Boolean);
 
+      for (const categoryName of categoryNames) {
+        const slug = categoryName
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "");
+
+        let categoryId = null;
+
+        // Find existing category
+        const categoryResult = await client.query(
+          `SELECT id
+           FROM categories
+           WHERE LOWER(name) = LOWER($1)
+              OR slug = $2
+           LIMIT 1`,
+          [categoryName, slug]
+        );
+
+        if (categoryResult.rows.length > 0) {
+          categoryId = categoryResult.rows[0].id;
+        } else {
+          // Create category if it doesn't exist
+          const newCategory = await client.query(
+            `INSERT INTO categories (name, slug)
+             VALUES ($1, $2)
+             RETURNING id`,
+            [categoryName, slug]
+          );
+
+          categoryId = newCategory.rows[0].id;
+        }
+
+        // Connect book to category
+        await client.query(
+          `INSERT INTO book_categories
+            (book_id, category_id)
+           VALUES ($1, $2)
+           ON CONFLICT DO NOTHING`,
+          [bookId, categoryId]
+        );
+      }
+    }
+
+    // =========================
+    // 5. SAVE ALL CHAPTERS
+    // =========================
     for (const chapter of chapters) {
       await client.query(
         `INSERT INTO book_chapters
@@ -213,10 +423,6 @@ async function createBookWithChapters(bookData, chapters) {
         ]
       );
     }
-
-    // --------------------------------------------------
-    // 5. FINISH TRANSACTION
-    // --------------------------------------------------
 
     await client.query("COMMIT");
 

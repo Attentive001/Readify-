@@ -121,29 +121,29 @@ async function uploadBook(req, res, next) {
     // IMPORTANT:
     // authorName and languageCode come from the upload form.
     // The model will resolve them to UUIDs.
-    const book = await bookModel.createBookWithChapters(
-      {
-        title: req.body.title || req.file.originalname,
-        description: req.body.description || null,
+   const book = await bookModel.createBookWithChapters(
+  {
+    title: req.body.title || req.file.originalname,
+    description: req.body.description || null,
 
-        authorName: req.body.authorName || null,
+    authorName: req.body.authorName || null,
 
-        languageCode: req.body.languageCode || null,
-        languageName: req.body.languageName || null,
+    languageCode: req.body.languageCode || null,
+    languageName: req.body.languageName || null,
 
-        publishedYear: req.body.publishedYear
-          ? Number(req.body.publishedYear)
-          : null,
+    publishedYear: req.body.publishedYear
+      ? Number(req.body.publishedYear)
+      : null,
 
-        isbn: req.body.isbn || null,
-        coverUrl: req.body.coverUrl || null,
-        sourceUrl: req.body.sourceUrl || null,
-        rightsStatus: req.body.rightsStatus || "unknown",
+    isbn: req.body.isbn || null,
+    coverUrl: req.body.coverUrl || null,
+    sourceUrl: req.body.sourceUrl || null,
+    rightsStatus: req.body.rightsStatus || "unknown",
 
-        categories: req.body.categories || "",
-      },
-      chapters
-    );
+    categories: req.body.categories || "",
+  },
+  chapters
+);
 
     res.status(201).json({
       message: "Book uploaded successfully.",
