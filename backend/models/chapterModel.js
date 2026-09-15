@@ -25,37 +25,95 @@ async function getChapterById(bookId, chapterId) {
   return rows[0] || null;
 }
 
-async function createChapter(bookId, { chapterNumber, title, content }) {
+async function createChapter(
+  bookId,
+  { chapterNumber, title, content }
+) {
+  const safeTitle = String(title || "")
+    .replace(/\u0000/g, "")
+    .trim();
+
+  const safeContent = String(content || "")
+    .replace(/\u0000/g, "");
+
   const { rows } = await pool.query(
     `
-      INSERT INTO book_chapters (book_id, chapter_number, title, content)
+      INSERT INTO book_chapters
+        (book_id, chapter_number, title, content)
       VALUES ($1, $2, $3, $4)
-      RETURNING id, book_id, chapter_number, title, content, created_at, updated_at
+      RETURNING
+        id,
+        book_id,
+        chapter_number,
+        title,
+        content,
+        created_at,
+        updated_at
     `,
-    [bookId, chapterNumber, title, content]
+    [
+      bookId,
+      chapterNumber,
+      safeTitle,
+      safeContent,
+    ]
   );
+
   return rows[0];
 }
 
 async function createChapters(bookId, chapters) {
   const client = await pool.connect();
+
   try {
     await client.query("BEGIN");
 
     const created = [];
+
     for (const chapter of chapters) {
+      const chapterNumber =
+        Number(chapter.chapterNumber) || 1;
+
+      const title = String(
+        chapter.title || ""
+      )
+        .replace(/\u0000/g, "")
+        .trim();
+
+      const content = String(
+        chapter.content || ""
+      ).replace(/\u0000/g, "");
+
+      if (!content.trim()) {
+        continue;
+      }
+
       const { rows } = await client.query(
         `
-          INSERT INTO book_chapters (book_id, chapter_number, title, content)
+          INSERT INTO book_chapters
+            (book_id, chapter_number, title, content)
           VALUES ($1, $2, $3, $4)
-          RETURNING id, book_id, chapter_number, title, content, created_at, updated_at
+          RETURNING
+            id,
+            book_id,
+            chapter_number,
+            title,
+            content,
+            created_at,
+            updated_at
         `,
-        [bookId, chapter.chapterNumber, chapter.title, chapter.content]
+        [
+          bookId,
+          chapterNumber,
+          title,
+          content,
+        ]
       );
+
       created.push(rows[0]);
     }
 
     await client.query("COMMIT");
+
     return created;
   } catch (err) {
     await client.query("ROLLBACK");

@@ -4,6 +4,27 @@ const BASE_SELECT = `
   SELECT
     b.id, b.title, b.description, b.published_year, b.isbn, b.cover_url,
     b.rights_status, b.is_featured, b.is_popular, b.created_at,
+    (
+      SELECT bf.file_url
+      FROM book_files bf
+      WHERE bf.book_id = b.id
+      ORDER BY bf.created_at DESC
+      LIMIT 1
+    ) AS file_url,
+    (
+      SELECT bf.format
+      FROM book_files bf
+      WHERE bf.book_id = b.id
+      ORDER BY bf.created_at DESC
+      LIMIT 1
+    ) AS file_format,
+    (
+      SELECT bf.size_bytes
+      FROM book_files bf
+      WHERE bf.book_id = b.id
+      ORDER BY bf.created_at DESC
+      LIMIT 1
+    ) AS file_size_bytes,
     a.id AS author_id, a.name AS author_name,
     l.code AS language_code, l.name AS language_name,
     COALESCE(
@@ -167,6 +188,30 @@ async function searchBooks({
       b.is_popular,
       b.created_at,
 
+      (
+        SELECT bf.file_url
+        FROM book_files bf
+        WHERE bf.book_id = b.id
+        ORDER BY bf.created_at DESC
+        LIMIT 1
+      ) AS file_url,
+
+      (
+        SELECT bf.format
+        FROM book_files bf
+        WHERE bf.book_id = b.id
+        ORDER BY bf.created_at DESC
+        LIMIT 1
+      ) AS file_format,
+
+      (
+        SELECT bf.size_bytes
+        FROM book_files bf
+        WHERE bf.book_id = b.id
+        ORDER BY bf.created_at DESC
+        LIMIT 1
+      ) AS file_size_bytes,
+
       a.id AS author_id,
       a.name AS author_name,
 
@@ -276,7 +321,7 @@ async function createBook(data) {
   return findBookById(rows[0].id);
 }
 
-async function createBookWithChapters(bookData, chapters) {
+async function createBookWithFile(bookData, fileData) {
   const client = await pool.connect();
 
   try {
@@ -378,7 +423,7 @@ async function createBookWithChapters(bookData, chapters) {
     // 4. SAVE CATEGORIES
     // =========================
     if (bookData.categories) {
-      const categoryNames = bookData.categories
+      const categoryNames = String(bookData.categories)
         .split(",")
         .map((name) => name.trim())
         .filter(Boolean);
@@ -386,13 +431,11 @@ async function createBookWithChapters(bookData, chapters) {
       for (const categoryName of categoryNames) {
         const slug = categoryName
           .toLowerCase()
-          .trim()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-+|-+$/g, "");
 
         let categoryId = null;
 
-        // Find existing category
         const categoryResult = await client.query(
           `SELECT id
            FROM categories
@@ -405,7 +448,6 @@ async function createBookWithChapters(bookData, chapters) {
         if (categoryResult.rows.length > 0) {
           categoryId = categoryResult.rows[0].id;
         } else {
-          // Create category if it doesn't exist
           const newCategory = await client.query(
             `INSERT INTO categories (name, slug)
              VALUES ($1, $2)
@@ -416,7 +458,6 @@ async function createBookWithChapters(bookData, chapters) {
           categoryId = newCategory.rows[0].id;
         }
 
-        // Connect book to category
         await client.query(
           `INSERT INTO book_categories
             (book_id, category_id)
@@ -428,28 +469,19 @@ async function createBookWithChapters(bookData, chapters) {
     }
 
     // =========================
-    // 5. SAVE ALL CHAPTERS
+    // 5. SAVE ORIGINAL FILE
     // =========================
-    for (const chapter of chapters) {
-  const cleanTitle = String(chapter.title || "")
-    .replace(/\u0000/g, "")
-    .trim();
-
-  const cleanContent = String(chapter.content || "")
-    .replace(/\u0000/g, "");
-
-  await client.query(
-    `INSERT INTO book_chapters
-      (book_id, chapter_number, title, content)
-     VALUES ($1, $2, $3, $4)`,
-    [
-      bookId,
-      chapter.chapterNumber,
-      cleanTitle,
-      cleanContent,
-    ]
-  );
-}
+    await client.query(
+      `INSERT INTO book_files
+        (book_id, format, file_url, size_bytes)
+       VALUES ($1, $2, $3, $4)`,
+      [
+        bookId,
+        fileData.format,
+        fileData.fileUrl,
+        fileData.sizeBytes,
+      ]
+    );
 
     await client.query("COMMIT");
 
@@ -461,23 +493,7 @@ async function createBookWithChapters(bookData, chapters) {
     client.release();
   }
 }
-async function listChaptersByBookId(bookId) {
-  const { rows } = await pool.query(
-    `SELECT
-       id,
-       book_id,
-       chapter_number,
-       title,
-       content,
-       created_at
-     FROM book_chapters
-     WHERE book_id = $1
-     ORDER BY chapter_number ASC`,
-    [bookId]
-  );
 
-  return rows;
-}
 module.exports = {
   searchBooks,
   findBookById,
@@ -485,6 +501,5 @@ module.exports = {
   listPopular,
   listRecentlyAdded,
   createBook,
-  createBookWithChapters,
-  listChaptersByBookId,
+  createBookWithFile,
 };

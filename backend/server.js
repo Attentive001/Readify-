@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
+const path = require("path");
 
 const authRoutes = require("./routes/authRoutes");
 const bookRoutes = require("./routes/bookRoutes");
@@ -11,7 +12,6 @@ const searchRoutes = require("./routes/searchRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
 const readingRoutes = require("./routes/readingRoutes");
 const progressRoutes = require("./routes/progressRoutes");
-const chapterRoutes = require("./routes/chapterRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -29,10 +29,15 @@ app.use(
 
 app.get("/health", (req, res) => res.json({ ok: true }));
 
+// Serve uploaded book files exactly as they were uploaded.
+app.use(
+  "/uploads/books",
+  express.static(path.join(__dirname, "uploads/books"))
+);
+
 const v1 = express.Router();
 v1.use("/auth", authRoutes);
 v1.use("/books", bookRoutes);
-v1.use("/books/:id/chapters", chapterRoutes);
 v1.use("/authors", authorRoutes);
 v1.use("/categories", categoryRoutes);
 v1.use("/search", searchRoutes);

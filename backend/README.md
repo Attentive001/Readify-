@@ -11,25 +11,13 @@ Corrected backend for the Readify reading platform.
 - `PATCH /api/v1/books/:id/chapters/:chapterId` — updates a chapter.
 - `DELETE /api/v1/books/:id/chapters/:chapterId` — deletes a chapter.
 
-The API uses the existing PostgreSQL database and the existing `book_chapters` table. No database is created or replaced by this backend package.
+The API uses the existing PostgreSQL database. Uploaded PDF/EPUB/TXT files are stored unchanged; the application does not split books into chapters.
 
 ## Important
 
 Before using the chapter endpoints, make sure this table exists in PostgreSQL:
 
 ```sql
-CREATE TABLE IF NOT EXISTS book_chapters (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    book_id UUID NOT NULL REFERENCES books(id) ON DELETE CASCADE,
-    chapter_number INTEGER NOT NULL,
-    title VARCHAR(500) NOT NULL,
-    content TEXT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE (book_id, chapter_number)
-);
-
-CREATE INDEX IF NOT EXISTS idx_book_chapters_book_id
 ON book_chapters(book_id, chapter_number);
 ```
 

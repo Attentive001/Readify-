@@ -143,7 +143,7 @@ export default function UploadBookPage() {
       }
 
       setMessage(
-        "Book uploaded successfully with its chapters."
+        "Book uploaded successfully. The original file was saved unchanged."
       );
 
       // Reset form
@@ -192,7 +192,7 @@ export default function UploadBookPage() {
 
           <p className="mt-2 text-gray-600">
             Add complete book information and upload the
-            book file. Chapters will be extracted automatically.
+            book file. The original PDF, EPUB, or TXT file will be saved unchanged.
           </p>
         </div>
 

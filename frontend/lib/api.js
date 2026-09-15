@@ -43,9 +43,6 @@ export const api = {
   getBook: (id) =>
     request(`/books/${id}`),
 
-  getChapters: (id) =>
-    request(`/books/${id}/chapters`),
-
   // =========================
   // SEARCH
   // =========================

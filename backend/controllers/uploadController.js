@@ -15,7 +15,7 @@ async function upload(req, res, next) {
     });
 
     res.status(201).json({
-      message: "Book uploaded and chapters imported successfully.",
+      message: "Book uploaded successfully. Original file was saved unchanged.",
       book: result,
     });
   } catch (err) {

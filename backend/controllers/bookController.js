@@ -1,19 +1,24 @@
-const fs = require("fs/promises");
 const { pool } = require("../config/database");
+const fs = require("fs/promises");
+const path = require("path");
 const bookModel = require("../models/bookModel");
-const chapterModel = require("../models/chapterModel");
-const { parseBook } = require("../services/bookParser");
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+
+// ======================================================
+// LIST BOOKS
+// ======================================================
 
 async function listBooks(req, res, next) {
   try {
     const { q, category, language, year, page, pageSize } = req.query;
 
     const dbInfo = await pool.query(`
-      SELECT
-        current_database() AS database_name,
-        current_schema() AS schema_name,
+      SELECT 
+        current_database() AS database_name, 
+        current_schema() AS schema_name, 
         (SELECT COUNT(*) FROM books) AS books_count
     `);
 
@@ -41,10 +46,18 @@ async function listBooks(req, res, next) {
     next(err);
   }
 }
+
+
+// ======================================================
+// GET ONE BOOK
+// ======================================================
+
 async function getBook(req, res, next) {
   try {
     if (!UUID_RE.test(req.params.id)) {
-      return res.status(400).json({ error: "Invalid book id." });
+      return res.status(400).json({
+        error: "Invalid book id.",
+      });
     }
 
     const book = await bookModel.findBookById(req.params.id);
@@ -61,6 +74,11 @@ async function getBook(req, res, next) {
   }
 }
 
+
+// ======================================================
+// FEATURED BOOKS
+// ======================================================
+
 async function getFeatured(req, res, next) {
   try {
     res.json({
@@ -70,6 +88,11 @@ async function getFeatured(req, res, next) {
     next(err);
   }
 }
+
+
+// ======================================================
+// POPULAR BOOKS
+// ======================================================
 
 async function getPopular(req, res, next) {
   try {
@@ -81,6 +104,11 @@ async function getPopular(req, res, next) {
   }
 }
 
+
+// ======================================================
+// RECENT BOOKS
+// ======================================================
+
 async function getRecent(req, res, next) {
   try {
     res.json({
@@ -91,36 +119,28 @@ async function getRecent(req, res, next) {
   }
 }
 
+
+// ======================================================
+// CREATE BOOK
+// ======================================================
+
 async function createBook(req, res, next) {
   try {
-    // NOTE: add an admin-only auth check here before exposing this in production.
+    // NOTE: Add an admin-only auth check here before production.
     const book = await bookModel.createBook(req.body);
-
     res.status(201).json({ book });
   } catch (err) {
     next(err);
   }
 }
 
-/**
- * Upload a complete book and save all chapters.
- *
- * Expected multipart/form-data:
- *
- * book          -> PDF / EPUB / TXT
- * title         -> Book title
- *authorName description   -> Description
- *       -> Author UUID
- * languageId    -> Language UUID
- * publishedYear -> Published year
- * isbn          -> ISBN
- * coverUrl      -> Optional cover URL
- * sourceUrl     -> Optional source URL
- * rightsStatus  -> public_domain / licensed / unknown
- */
-async function uploadBook(req, res, next) {
-  let uploadedFilePath = null;
+// ======================================================
+// UPLOAD COMPLETE BOOK
+// IMPORTANT: the uploaded PDF / EPUB / TXT is NOT parsed,
+// split, rewritten, or converted. The original file is kept.
+// ======================================================
 
+async function uploadBook(req, res, next) {
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -128,97 +148,68 @@ async function uploadBook(req, res, next) {
       });
     }
 
-    uploadedFilePath = req.file.path;
+    const book = await bookModel.createBookWithFile(
+      {
+        title: req.body.title || req.file.originalname,
+        description: req.body.description || null,
 
-    // Parse PDF / EPUB / TXT
-    const chapters = await parseBook(uploadedFilePath);
+        authorName: req.body.authorName || null,
 
-    if (!chapters || chapters.length === 0) {
-      return res.status(400).json({
-        error: "No readable chapters were found in the uploaded book.",
-      });
-    }
+        languageCode: req.body.languageCode || null,
+        languageName: req.body.languageName || null,
 
-    // IMPORTANT:
-    // authorName and languageCode come from the upload form.
-    // The model will resolve them to UUIDs.
-   const book = await bookModel.createBookWithChapters(
-  {
-    title: req.body.title || req.file.originalname,
-    description: req.body.description || null,
+        publishedYear: req.body.publishedYear
+          ? Number(req.body.publishedYear)
+          : null,
 
-    authorName: req.body.authorName || null,
-
-    languageCode: req.body.languageCode || null,
-    languageName: req.body.languageName || null,
-
-    publishedYear: req.body.publishedYear
-      ? Number(req.body.publishedYear)
-      : null,
-
-    isbn: req.body.isbn || null,
-    coverUrl: req.body.coverUrl || null,
-    sourceUrl: req.body.sourceUrl || null,
-    rightsStatus: req.body.rightsStatus || "unknown",
-
-    categories: req.body.categories || "",
-  },
-  chapters
-);
+        isbn: req.body.isbn || null,
+        coverUrl: req.body.coverUrl || null,
+        sourceUrl: req.body.sourceUrl || null,
+        rightsStatus: req.body.rightsStatus || "unknown",
+        categories: req.body.categories || "",
+      },
+      {
+        fileUrl: `/uploads/books/${req.file.filename}`,
+        format: req.file.mimetype === "application/pdf"
+          ? "pdf"
+          : path.extname(req.file.originalname).toLowerCase().replace(".", ""),
+        sizeBytes: req.file.size,
+      }
+    );
 
     res.status(201).json({
-      message: "Book uploaded successfully.",
+      message: "Book uploaded successfully. Original file was saved unchanged.",
       book,
-      chapters: {
-        total: chapters.length,
-        items: chapters.map((chapter) => ({
-          chapterNumber: chapter.chapterNumber,
-          title: chapter.title,
-        })),
+      file: {
+        url: `/uploads/books/${req.file.filename}`,
+        format: req.file.mimetype === "application/pdf"
+          ? "pdf"
+          : path.extname(req.file.originalname).toLowerCase().replace(".", ""),
+        sizeBytes: req.file.size,
       },
     });
   } catch (err) {
     console.error("UPLOAD BOOK ERROR:", err);
-    next(err);
-  } finally {
-    if (uploadedFilePath) {
+
+    // If database saving failed, remove the uploaded file.
+    if (req.file?.path) {
       try {
-        await fs.unlink(uploadedFilePath);
+        await fs.unlink(req.file.path);
       } catch (fileError) {
         console.error(
-          "Could not remove uploaded file:",
+          "Could not remove failed upload:",
           fileError.message
         );
       }
     }
-  }
-}
-async function getChapters(req, res, next) {
-  try {
-    if (!UUID_RE.test(req.params.id)) {
-      return res.status(400).json({ error: "Invalid book id." });
-    }
-
-    const book = await bookModel.findBookById(req.params.id);
-
-    if (!book) {
-      return res.status(404).json({
-        error: "Book not found.",
-      });
-    }
-
-    const chapters = await chapterModel.getChaptersByBookId(req.params.id);
-
-    res.json({
-      chapters,
-      total: chapters.length,
-    });
-  } catch (err) {
-    console.error("Get chapters error:", err);
 
     next(err);
   }
 }
+
+// ======================================================
+// EXPORTS
+// ======================================================
 
 module.exports = {
   listBooks,
@@ -228,5 +219,5 @@ module.exports = {
   getRecent,
   createBook,
   uploadBook,
-  getChapters,
+
 };
