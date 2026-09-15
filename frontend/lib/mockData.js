@@ -1,5 +1,5 @@
 export const mockBooks = [
-  { id: 1, title: "Atomic Habits", author_name: "James Clear", category: "Self-Development", year: 2018, description: "An approachable guide to building good habits, breaking bad ones, and making small changes that compound over time.", cover: "AH", accent: "gold" },
+  { id: 1, title: "Atomic Habits", author_name: "James Clear", category: "Self-Development", year: 2018, description: ".", cover: "AH", accent: "gold" },
   { id: 2, title: "The Alchemist", author_name: "Paulo Coelho", category: "Literature", year: 1988, description: "A young shepherd follows a recurring dream and discovers lessons about purpose, courage, and listening to the heart.", cover: "TA", accent: "blue" },
   { id: 3, title: "Deep Work", author_name: "Cal Newport", category: "Technology", year: 2016, description: "A practical philosophy for focusing without distraction and producing meaningful work in a noisy world.", cover: "DW", accent: "purple" },
   { id: 4, title: "Think Again", author_name: "Adam Grant", category: "Education", year: 2021, description: "Explore the value of rethinking assumptions, changing your mind, and becoming more curious.", cover: "TG", accent: "green" },
@@ -24,6 +24,4 @@ export const categories = [
   ["Education", "Learn something new every day", "▤"],
 ];
 
-export function findMockBook(id) {
-  return mockBooks.find((book) => String(book.id) === String(id));
-}
+

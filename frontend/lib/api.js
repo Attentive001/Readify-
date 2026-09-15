@@ -5,6 +5,7 @@ const API_URL =
 async function request(path, options = {}) {
   const res = await fetch(`${API_URL}${path}`, {
     ...options,
+    cache: "no-store",
     headers: {
       "Content-Type": "application/json",
       ...(options.headers || {}),
@@ -13,8 +14,9 @@ async function request(path, options = {}) {
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
+
     throw new Error(
-      body.error || `Request failed: ${res.status}`
+      body.error || body.message || `Request failed: ${res.status}`
     );
   }
 
@@ -22,33 +24,67 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  // Books
+  // =========================
+  // BOOKS
+  // =========================
+
   getBooks: (params = {}) =>
-  request(`/books?${new URLSearchParams(params)}`),
+    request(`/books?${new URLSearchParams(params)}`),
 
-  getFeatured: () => request("/books/featured"),
+  getFeatured: () =>
+    request("/books/featured"),
 
-  getPopular: () => request("/books/popular"),
+  getPopular: () =>
+    request("/books/popular"),
 
-  getRecent: () => request("/books/recent"),
+  getRecent: () =>
+    request("/books/recent"),
 
-  getBook: (id) => request(`/books/${id}`),
+  getBook: (id) =>
+    request(`/books/${id}`),
 
   getChapters: (id) =>
     request(`/books/${id}/chapters`),
 
-  // Search
-  search: (params) =>
-    request(`/search?${new URLSearchParams(params)}`),
+  // =========================
+  // SEARCH
+  // =========================
 
-  // Categories
+  search: async ({
+    q = "",
+    category = "",
+    language = "",
+    year = "",
+    page = 1,
+    pageSize = 20,
+  } = {}) => {
+    const params = new URLSearchParams();
+
+    if (q) params.set("q", q);
+    if (category) params.set("category", category);
+    if (language) params.set("language", language);
+    if (year) params.set("year", year);
+
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+
+    return request(`/search?${params.toString()}`);
+  },
+
+  // =========================
+  // CATEGORIES
+  // =========================
+
   getCategories: () =>
     request("/categories"),
 
-  getCategoryBooks: async (slug) => {
-  return request(`/categories/${slug}/books`);
-},
-  // Auth
+  getCategoryBooks: (slug) =>
+    request(`/categories/${slug}/books`),
+
+  // =========================
+  // AUTH
+  // =========================
+
   login: (email, password) =>
     request("/auth/login", {
       method: "POST",
@@ -67,90 +103,79 @@ export const api = {
         displayName,
       }),
     }),
-// logout
+
   logout: () => {
     localStorage.removeItem("readify_token");
     localStorage.removeItem("readify_user");
   },
-// getprofile
+
   getProfile: (token) =>
     request("/auth/profile", {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     }),
-getProgress: async (bookId) => {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("readify_token")
-      : null;
 
-  return request(`/books/${bookId}/progress`, {
-    method: "GET",
-    headers: token
-      ? {
-          Authorization: `Bearer ${token}`,
-        }
-      : {},
-  });
-},
+  // =========================
+  // READING PROGRESS
+  // =========================
 
-saveProgress: async (bookId, percent, location) => {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("readify_token")
-      : null;
+  getProgress: async (bookId) => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("readify_token")
+        : null;
 
-  if (!token) {
-    return null;
-  }
+    return request(`/books/${bookId}/progress`, {
+      method: "GET",
+      headers: token
+        ? {
+            Authorization: `Bearer ${token}`,
+          }
+        : {},
+    });
+  },
 
-  return request(`/books/${bookId}/progress`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({
-      percent,
-      location,
-    }),
-  });
-},
-search: async ({
-  q = "",
-  category = "",
-  language = "",
-  year = "",
-  page = 1,
-  pageSize = 20,
-} = {}) => {
-  const params = new URLSearchParams();
+  saveProgress: async (bookId, percent, location) => {
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("readify_token")
+        : null;
 
-  if (q) params.set("q", q);
-  if (category) params.set("category", category);
-  if (language) params.set("language", language);
-  if (year) params.set("year", year);
+    if (!token) {
+      return null;
+    }
 
-  params.set("page", String(page));
-  params.set("pageSize", String(pageSize));
+    return request(`/books/${bookId}/progress`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        percent,
+        location,
+      }),
+    });
+  },
 
-  return request(
-    `/search?${params.toString()}`
-  );
-},
+  // =========================
+  // UPLOAD BOOK
+  // =========================
 
-  // Upload book
   uploadBook: async (formData) => {
     const res = await fetch(`${API_URL}/books/upload`, {
       method: "POST",
       body: formData,
+      cache: "no-store",
     });
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
 
       throw new Error(
-        body.error || `Upload failed: ${res.status}`
+        body.error ||
+          body.message ||
+          `Upload failed: ${res.status}`
       );
     }
 

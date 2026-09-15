@@ -431,29 +431,73 @@ export default function UploadBookPage() {
               />
             </div>
 
-            {/* Categories */}
-            <div className="md:col-span-2">
-              <label
-                htmlFor="categories"
-                className="mb-2 block text-sm font-semibold text-gray-700"
-              >
-                Categories *
-              </label>
+           {/* Categories */}
+<div className="md:col-span-2">
+  <label
+    htmlFor="categories"
+    className="mb-2 block text-sm font-semibold text-gray-700"
+  >
+    Category *
+  </label>
 
-              <input
-                id="categories"
-                name="categories"
-                type="text"
-                value={form.categories}
-                onChange={handleChange}
-                placeholder="Example: Fiction, Classic Literature, Science"
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-              />
+  <select
+    id="categories"
+    name="categories"
+    value={form.categories}
+    onChange={handleChange}
+    className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
+  >
+    <option value="">Select a category</option>
 
-              <p className="mt-2 text-xs text-gray-500">
-                Separate multiple categories with commas.
-              </p>
-            </div>
+    <option value="Self-Development">
+      Self-Development
+    </option>
+
+    <option value="Business">
+      Business
+    </option>
+
+    <option value="Technology">
+      Technology
+    </option>
+
+    <option value="Science">
+      Science
+    </option>
+
+    <option value="History">
+      History
+    </option>
+
+    <option value="Literature">
+      Literature
+    </option>
+
+    <option value="Philosophy">
+      Philosophy
+    </option>
+
+    <option value="Education">
+      Education
+    </option>
+
+    <option value="Fiction">
+      Fiction
+    </option>
+    
+    <option value="Economics">
+      Economics
+    </option>
+
+    <option value="Christian Bible">
+      Christian Bible
+    </option>
+  </select>
+
+  <p className="mt-2 text-xs text-gray-500">
+    Select the category that best describes this book.
+  </p>
+</div>
 
             {/* Book File */}
             <div className="md:col-span-2">

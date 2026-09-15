@@ -15,6 +15,8 @@ const categories = [
   "Literature",
   "Philosophy",
   "Education",
+  "Fiction",
+  "Economics"
 ];
 
 export default function SearchPage() {

@@ -8,7 +8,9 @@ async function getBooks(fn) {
   try {
     const data = await fn();
 
-    return Array.isArray(data?.books) ? data.books : [];
+    if (Array.isArray(data?.books)) return data.books;
+    if (Array.isArray(data?.books?.books)) return data.books.books;
+    return [];
   } catch (error) {
     console.error("Failed to load books:", error);
     return [];
@@ -38,6 +40,7 @@ export default async function HomePage() {
    * Create category sections from books
    *
    * Example:
+   * THE BOOK OF ENOCH
    * -> History
    */
   const categoryMap = new Map();
@@ -370,13 +373,6 @@ export default async function HomePage() {
               Upload a book from the Readify Admin page
               and assign it to a category.
             </p>
-
-            <a
-              href="/admin/upload"
-              className="mt-6 inline-block rounded-full bg-ink px-6 py-3 text-sm font-bold text-parchment"
-            >
-              Upload a book →
-            </a>
 
           </div>
 

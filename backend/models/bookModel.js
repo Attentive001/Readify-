@@ -24,6 +24,7 @@ async function searchBooks({
   q = "",
   categorySlug = null,
   languageCode = null,
+  year = null,
   page = 1,
   pageSize = 20,
 }) {
@@ -87,6 +88,15 @@ async function searchBooks({
           AND c_category.slug = $${index}
       )
     `);
+  }
+
+  /*
+   * Filter by publication year
+   */
+  if (year && String(year).trim()) {
+    values.push(Number(year));
+    const index = values.length;
+    conditions.push(`b.published_year = $${index}`);
   }
 
   /*
@@ -214,7 +224,17 @@ async function searchBooks({
 }
 
 async function findBookById(id) {
-  const { rows } = await pool.query(`${BASE_SELECT} WHERE b.id = $1 ${GROUP_BY}`, [id]);
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  if (!UUID_RE.test(String(id || ""))) {
+    return null;
+  }
+
+  const { rows } = await pool.query(
+    `${BASE_SELECT} WHERE b.id = $1 ${GROUP_BY}`,
+    [id]
+  );
+
   return rows[0] || null;
 }
 
@@ -411,18 +431,25 @@ async function createBookWithChapters(bookData, chapters) {
     // 5. SAVE ALL CHAPTERS
     // =========================
     for (const chapter of chapters) {
-      await client.query(
-        `INSERT INTO book_chapters
-          (book_id, chapter_number, title, content)
-         VALUES ($1, $2, $3, $4)`,
-        [
-          bookId,
-          chapter.chapterNumber,
-          chapter.title,
-          chapter.content,
-        ]
-      );
-    }
+  const cleanTitle = String(chapter.title || "")
+    .replace(/\u0000/g, "")
+    .trim();
+
+  const cleanContent = String(chapter.content || "")
+    .replace(/\u0000/g, "");
+
+  await client.query(
+    `INSERT INTO book_chapters
+      (book_id, chapter_number, title, content)
+     VALUES ($1, $2, $3, $4)`,
+    [
+      bookId,
+      chapter.chapterNumber,
+      cleanTitle,
+      cleanContent,
+    ]
+  );
+}
 
     await client.query("COMMIT");
 

@@ -1,185 +1,255 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "../../../lib/api";
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
 
 function normalizeChapters(data) {
   if (Array.isArray(data)) return data;
   if (Array.isArray(data?.chapters)) return data.chapters;
-  if (Array.isArray(data?.data?.chapters)) return data.data.chapters;
+  if (Array.isArray(data?.data?.chapters)) {
+    return data.data.chapters;
+  }
+
   return [];
 }
 
 function chapterNumber(chapter, index) {
-  return chapter.chapter_number ?? chapter.chapterNumber ?? index + 1;
+  return (
+    chapter.chapter_number ??
+    chapter.chapterNumber ??
+    index + 1
+  );
 }
 
 function chapterTitle(chapter, index) {
-  return chapter.title || `Chapter ${chapterNumber(chapter, index)}`;
+  return (
+    chapter.title ||
+    `Chapter ${chapterNumber(chapter, index)}`
+  );
 }
 
 function chapterContent(chapter) {
   return chapter.content || "";
 }
 
+function containsHtml(content) {
+  return /<[^>]+>/.test(
+    String(content || "")
+  );
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function textToHtml(text) {
+  return String(text || "")
+    .replace(/\u0000/g, "")
+    .split(/\n\s*\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map(
+      (paragraph) =>
+        `<p>${escapeHtml(paragraph).replace(
+          /\n/g,
+          "<br />"
+        )}</p>`
+    )
+    .join("");
+}
+
+function prepareContent(content) {
+  if (!content) return "";
+
+  if (containsHtml(content)) {
+    return String(content).replace(
+      /\u0000/g,
+      ""
+    );
+  }
+
+  return textToHtml(content);
+}
+
+/*
+ * Convert all chapters into one HTML document.
+ */
+function buildFullBookHtml(chapters) {
+  return chapters
+    .map((chapter, index) => {
+      const title = escapeHtml(
+        chapterTitle(chapter, index)
+      );
+
+      const content = prepareContent(
+        chapterContent(chapter)
+      );
+
+      return `
+        <section class="book-chapter">
+          <h2>${title}</h2>
+          ${content}
+        </section>
+      `;
+    })
+    .join("");
+}
+
+
+/* ============================================================
+   COMPONENT
+   ============================================================ */
+
 export default function ReaderPage({ params }) {
   const [book, setBook] = useState(null);
   const [chapters, setChapters] = useState([]);
-  const [chapterIndex, setChapterIndex] = useState(0);
+
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pages, setPages] = useState([]);
 
   const [fontSize, setFontSize] = useState(18);
-  const [bookmarked, setBookmarked] = useState(false);
+  const [bookmarked, setBookmarked] =
+    useState(false);
 
   const [progress, setProgress] = useState(0);
-  const [savedLocation, setSavedLocation] = useState(null);
-  const [progressLoading, setProgressLoading] = useState(true);
+  const [savedLocation, setSavedLocation] =
+    useState(null);
 
-  const [loading, setLoading] = useState(true);
-  const [chapterLoading, setChapterLoading] = useState(true);
+  const [loading, setLoading] =
+    useState(true);
+
   const [error, setError] = useState("");
 
-  const contentRef = useRef(null);
+  const [paginationReady, setPaginationReady] =
+    useState(false);
+
+  const measureRef = useRef(null);
   const saveTimerRef = useRef(null);
-
-  const currentChapter = chapters[chapterIndex];
-
-  const content = currentChapter
-    ? chapterContent(currentChapter)
-    : "";
 
   /*
    * ============================================================
-   * 1. LOAD BOOK + CHAPTERS + SAVED PROGRESS
+   * LOAD BOOK
    * ============================================================
    */
+
   useEffect(() => {
     let cancelled = false;
 
     async function loadReader() {
       setLoading(true);
-      setChapterLoading(true);
-      setProgressLoading(true);
       setError("");
 
       try {
-        // Load book
-        const bookData = await api.getBook(params.id);
+        /*
+         * Load book
+         */
+        const bookData =
+          await api.getBook(params.id);
 
         if (cancelled) return;
 
         if (!bookData?.book) {
           setError("Book not found.");
           setLoading(false);
-          setChapterLoading(false);
-          setProgressLoading(false);
           return;
         }
 
         setBook(bookData.book);
 
-        // Load chapters
+        /*
+         * Load ALL chapters
+         */
+        const chapterData =
+          await api.getChapters(params.id);
+
+        if (cancelled) return;
+
+        const loadedChapters =
+          normalizeChapters(chapterData);
+
+        if (!loadedChapters.length) {
+          setError(
+            "This book does not have readable chapters."
+          );
+
+          setChapters([]);
+          setLoading(false);
+          return;
+        }
+
+        /*
+         * Sort chapters correctly.
+         */
+        const sortedChapters =
+          [...loadedChapters].sort(
+            (a, b) =>
+              Number(
+                a.chapter_number ??
+                  a.chapterNumber ??
+                  0
+              ) -
+              Number(
+                b.chapter_number ??
+                  b.chapterNumber ??
+                  0
+              )
+          );
+
+        setChapters(sortedChapters);
+
+        /*
+         * Load saved progress.
+         */
         try {
-          const chapterData = await api.getChapters(params.id);
+          const progressData =
+            await api.getProgress(params.id);
 
-          if (cancelled) return;
+          if (
+            !cancelled &&
+            progressData?.progress
+          ) {
+            const saved =
+              progressData.progress;
 
-          const loadedChapters = normalizeChapters(chapterData);
-
-          if (loadedChapters.length === 0) {
-            setError("This book does not have readable chapters.");
-            setChapters([]);
-            setProgressLoading(false);
-          } else {
-            setChapters(loadedChapters);
-
-            /*
-             * Default chapter
-             */
-            let selectedChapterIndex = 0;
-
-            /*
-             * Load saved reading progress
-             */
-            try {
-              const progressData = await api.getProgress(params.id);
-
-              if (!cancelled && progressData?.progress) {
-                const saved = progressData.progress;
-
-                const savedPercent =
-                  Number(saved.percent) || 0;
-
-                setProgress(savedPercent);
-                setSavedLocation(saved.location || null);
-
-                /*
-                 * Find saved chapter
-                 */
-                if (saved.location) {
-                  const foundIndex = loadedChapters.findIndex(
-                    (chapter, index) => {
-                      const number = chapterNumber(
-                        chapter,
-                        index
-                      );
-
-                      return (
-                        String(saved.location) ===
-                          String(chapter.id) ||
-                        String(saved.location) ===
-                          String(number)
-                      );
-                    }
-                  );
-
-                  if (foundIndex >= 0) {
-                    selectedChapterIndex = foundIndex;
-                  }
-                }
-              }
-            } catch (progressError) {
-              /*
-               * User may not be logged in.
-               * Reading should still work.
-               */
-              console.warn(
-                "Progress loading skipped:",
-                progressError
-              );
-            }
-
-            if (!cancelled) {
-              setChapterIndex(selectedChapterIndex);
-            }
-          }
-        } catch (chapterError) {
-          if (!cancelled) {
-            console.error(
-              "Chapter loading error:",
-              chapterError
+            setProgress(
+              Number(saved.percent) || 0
             );
 
-            setChapters([]);
-
-            setError(
-              "The book was found, but its chapters could not be loaded."
+            setSavedLocation(
+              saved.location || null
             );
           }
+        } catch (progressError) {
+          console.warn(
+            "Progress loading skipped:",
+            progressError
+          );
         }
       } catch (err) {
         if (!cancelled) {
-          console.error("Book loading error:", err);
+          console.error(
+            "Reader loading error:",
+            err
+          );
 
           setError(
-            err.message || "Unable to load this book."
+            err.message ||
+              "Unable to load this book."
           );
         }
       } finally {
         if (!cancelled) {
           setLoading(false);
-          setChapterLoading(false);
-          setProgressLoading(false);
         }
       }
     }
@@ -191,173 +261,411 @@ export default function ReaderPage({ params }) {
     };
   }, [params.id]);
 
-  /*
-   * ============================================================
-   * 2. SCROLL → CALCULATE PROGRESS → SAVE PROGRESS
-   * ============================================================
-   */
-  useEffect(() => {
-    if (!chapters.length || !currentChapter) {
+
+  /* ============================================================
+     FULL BOOK HTML
+     ============================================================ */
+
+  const fullBookHtml = useMemo(() => {
+    if (!chapters.length) {
+      return "";
+    }
+
+    return buildFullBookHtml(
+      chapters
+    );
+  }, [chapters]);
+
+
+  /* ============================================================
+     REAL PAGINATION
+     ============================================================
+
+     We measure the actual height of the reader page.
+
+     Nothing is split after a fixed number of paragraphs.
+
+     Instead:
+
+       Content
+          ↓
+       Page height
+          ↓
+       If content fits → same page
+       If content does not fit → next page
+   ============================================================ */
+
+ useEffect(() => {
+  if (!fullBookHtml || !measureRef.current) {
+    return;
+  }
+
+  let cancelled = false;
+
+  const createPages = () => {
+    const measure = measureRef.current;
+
+    if (!measure) return;
+
+    /*
+     * IMPORTANT:
+     * Give the measuring element a real size.
+     */
+    measure.style.width =
+      window.innerWidth <= 640
+        ? "calc(100vw - 40px)"
+        : "760px";
+
+    measure.style.height =
+      window.innerWidth <= 640
+        ? "650px"
+        : "720px";
+
+    measure.style.padding =
+      window.innerWidth <= 640
+        ? "32px 20px"
+        : "56px 64px";
+
+    measure.innerHTML = "";
+
+    const source =
+      document.createElement("div");
+
+    source.innerHTML =
+      fullBookHtml;
+
+    /*
+     * Only use direct children.
+     * This is much faster than searching
+     * the entire document repeatedly.
+     */
+    const blocks = [];
+
+    Array.from(source.children).forEach(
+      (chapter) => {
+        if (
+          chapter.classList.contains(
+            "book-chapter"
+          )
+        ) {
+          Array.from(
+            chapter.children
+          ).forEach((child) => {
+            blocks.push(
+              child.cloneNode(true)
+            );
+          });
+        } else {
+          blocks.push(
+            chapter.cloneNode(true)
+          );
+        }
+      }
+    );
+
+    if (!blocks.length) {
+      setPages([fullBookHtml]);
+      setPageIndex(0);
+      setPaginationReady(true);
       return;
     }
 
-    function handleScroll() {
-      const element = contentRef.current;
+    const generatedPages = [];
 
-      if (!element) {
-        return;
+    let currentPage =
+      document.createElement("div");
+
+    currentPage.className =
+      "pagination-page-content";
+
+    measure.appendChild(
+      currentPage
+    );
+
+    const pageHeight =
+      measure.clientHeight;
+
+    /*
+     * Safety fallback.
+     */
+    if (pageHeight <= 0) {
+      console.warn(
+        "Reader page height is 0."
+      );
+
+      setPages([fullBookHtml]);
+      setPageIndex(0);
+      setPaginationReady(true);
+
+      return;
+    }
+
+    function saveCurrentPage() {
+      const html =
+        currentPage.innerHTML.trim();
+
+      if (html) {
+        generatedPages.push(html);
       }
+    }
+
+    function newPage() {
+      saveCurrentPage();
+
+      measure.innerHTML = "";
+
+      currentPage =
+        document.createElement("div");
+
+      currentPage.className =
+        "pagination-page-content";
+
+      measure.appendChild(
+        currentPage
+      );
+    }
+
+    /*
+     * Add each block to the current page.
+     */
+    for (const block of blocks) {
+      const clone =
+        block.cloneNode(true);
+
+      currentPage.appendChild(
+        clone
+      );
 
       /*
-       * Position of the chapter content
+       * If it doesn't fit,
+       * move it to the next page.
        */
-      const rect = element.getBoundingClientRect();
+      if (
+        currentPage.scrollHeight >
+        pageHeight
+      ) {
+        currentPage.removeChild(
+          clone
+        );
 
-      const chapterTop =
-        window.scrollY + rect.top;
+        /*
+         * If there is already content
+         * on this page, save it and
+         * move the block to next page.
+         */
+        if (
+          currentPage.children.length > 0
+        ) {
+          newPage();
 
-      const chapterHeight = element.offsetHeight;
+          currentPage.appendChild(
+            clone
+          );
+        } else {
+          /*
+           * The single block itself is
+           * larger than a page.
+           *
+           * Keep it instead of losing it.
+           */
+          currentPage.appendChild(
+            clone
+          );
 
-      const viewportHeight = window.innerHeight;
+          saveCurrentPage();
 
-      /*
-       * How far the user has moved through this chapter
-       */
-      const start = chapterTop;
+          measure.innerHTML = "";
 
-      const end =
-        chapterTop +
-        chapterHeight -
-        viewportHeight;
+          currentPage =
+            document.createElement(
+              "div"
+            );
 
-      const availableDistance =
-        Math.max(1, end - start);
+          currentPage.className =
+            "pagination-page-content";
 
-      const currentPosition =
-        window.scrollY - start;
+          measure.appendChild(
+            currentPage
+          );
+        }
+      }
+    }
 
-      const chapterProgress = Math.max(
-        0,
+    saveCurrentPage();
+
+    if (!cancelled) {
+      setPages(
+        generatedPages
+      );
+
+      setPageIndex((oldIndex) =>
         Math.min(
-          100,
-          Math.round(
-            (currentPosition / availableDistance) *
-              100
+          oldIndex,
+          Math.max(
+            0,
+            generatedPages.length - 1
           )
         )
       );
 
-      /*
-       * Calculate whole-book progress
-       */
-      const overallProgress = Math.round(
-        ((chapterIndex +
-          chapterProgress / 100) /
-          chapters.length) *
+      setPaginationReady(true);
+    }
+  };
+
+  /*
+   * Wait only one browser frame.
+   * This allows fonts/CSS to settle
+   * without an unnecessary long delay.
+   */
+  const frame =
+    requestAnimationFrame(
+      createPages
+    );
+
+  return () => {
+    cancelled = true;
+    cancelAnimationFrame(frame);
+  };
+}, [
+  fullBookHtml,
+  fontSize,
+]);
+  /* ============================================================
+     PAGE PROGRESS
+     ============================================================ */
+
+  useEffect(() => {
+    if (!pages.length) {
+      return;
+    }
+
+    const newProgress =
+      Math.round(
+        ((pageIndex + 1) /
+          pages.length) *
           100
       );
 
-      const safeOverallProgress = Math.max(
+    setProgress(
+      Math.max(
         0,
-        Math.min(100, overallProgress)
-      );
-
-      setProgress(safeOverallProgress);
-
-      /*
-       * Location = current chapter.
-       *
-       * This allows Continue Reading to know
-       * which chapter to open.
-       */
-      const location =
-        currentChapter.id ||
-        chapterNumber(
-          currentChapter,
-          chapterIndex
-        );
-
-      setSavedLocation(String(location));
-
-      /*
-       * Avoid sending a request on every scroll event.
-       * Wait 1 second after the user stops scrolling.
-       */
-      clearTimeout(saveTimerRef.current);
-
-      saveTimerRef.current = setTimeout(
-        async () => {
-          try {
-            await api.saveProgress(
-              params.id,
-              safeOverallProgress,
-              String(location)
-            );
-          } catch (saveError) {
-            console.warn(
-              "Could not save reading progress:",
-              saveError
-            );
-          }
-        },
-        1000
-      );
-    }
-
-    window.addEventListener(
-      "scroll",
-      handleScroll,
-      { passive: true }
+        Math.min(
+          100,
+          newProgress
+        )
+      )
     );
 
-    return () => {
-      window.removeEventListener(
-        "scroll",
-        handleScroll
-      );
+    const location =
+      String(pageIndex + 1);
 
-      clearTimeout(saveTimerRef.current);
+    setSavedLocation(
+      location
+    );
+
+    clearTimeout(
+      saveTimerRef.current
+    );
+
+    saveTimerRef.current =
+      setTimeout(async () => {
+        try {
+          await api.saveProgress(
+            params.id,
+            newProgress,
+            location
+          );
+        } catch (error) {
+          console.warn(
+            "Could not save reading progress:",
+            error
+          );
+        }
+      }, 700);
+
+    return () => {
+      clearTimeout(
+        saveTimerRef.current
+      );
     };
   }, [
-    chapters,
-    chapterIndex,
-    currentChapter,
+    pageIndex,
+    pages.length,
     params.id,
   ]);
 
-  /*
-   * ============================================================
-   * 3. WHEN USER CHANGES CHAPTER → SCROLL TO TOP
-   * ============================================================
-   */
-  useEffect(() => {
-    if (!currentChapter) return;
 
+  /* ============================================================
+     GO TO TOP WHEN PAGE CHANGES
+     ============================================================ */
+
+  useEffect(() => {
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  }, [chapterIndex, currentChapter]);
+  }, [pageIndex]);
 
-  /*
-   * ============================================================
-   * 4. SAVE PROGRESS WHEN USER LEAVES PAGE
-   * ============================================================
-   */
+
+  /* ============================================================
+     KEYBOARD
+     ============================================================ */
+
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if (event.key === "ArrowRight") {
+        setPageIndex((index) =>
+          Math.min(
+            pages.length - 1,
+            index + 1
+          )
+        );
+      }
+
+      if (event.key === "ArrowLeft") {
+        setPageIndex((index) =>
+          Math.max(
+            0,
+            index - 1
+          )
+        );
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleKeyDown
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleKeyDown
+      );
+    };
+  }, [pages.length]);
+
+
+  /* ============================================================
+     CLEANUP
+     ============================================================ */
+
   useEffect(() => {
     return () => {
-      clearTimeout(saveTimerRef.current);
+      clearTimeout(
+        saveTimerRef.current
+      );
     };
   }, []);
 
-  /*
-   * ============================================================
-   * LOADING SCREEN
-   * ============================================================
-   */
+
+  /* ============================================================
+     LOADING
+     ============================================================ */
+
   if (loading) {
     return (
-      <main className="min-h-screen px-5 py-16">
+      <main className="min-h-screen bg-parchment px-5 py-16">
         <div className="mx-auto max-w-3xl text-center">
           <p className="text-ink/60">
             Loading book...
@@ -367,14 +675,14 @@ export default function ReaderPage({ params }) {
     );
   }
 
-  /*
-   * ============================================================
-   * BOOK NOT FOUND
-   * ============================================================
-   */
+
+  /* ============================================================
+     BOOK NOT FOUND
+     ============================================================ */
+
   if (!book) {
     return (
-      <main className="min-h-screen px-5 py-16">
+      <main className="min-h-screen bg-parchment px-5 py-16">
         <div className="mx-auto max-w-3xl">
           <Link
             href="/search"
@@ -384,20 +692,35 @@ export default function ReaderPage({ params }) {
           </Link>
 
           <h1 className="mt-8 font-display text-3xl font-bold">
-            {error || "Book not found."}
+            {error ||
+              "Book not found."}
           </h1>
         </div>
       </main>
     );
   }
 
+
+  /* ============================================================
+     CURRENT PAGE
+     ============================================================ */
+
+  const currentPage =
+    pages[pageIndex] || "";
+
+
+  /* ============================================================
+     UI
+     ============================================================ */
+
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-parchment">
 
       {/* ======================================================
-          READER TOOLBAR
+          TOOLBAR
       ====================================================== */}
-      <div className="sticky top-0 z-20 border-b border-ink/10 bg-parchment/95 backdrop-blur">
+
+      <div className="sticky top-0 z-30 border-b border-ink/10 bg-parchment/95 backdrop-blur">
 
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3">
 
@@ -411,11 +734,16 @@ export default function ReaderPage({ params }) {
           <div className="flex items-center gap-2">
 
             {/* Font decrease */}
+
             <button
               type="button"
               onClick={() =>
-                setFontSize((size) =>
-                  Math.max(14, size - 2)
+                setFontSize(
+                  (size) =>
+                    Math.max(
+                      15,
+                      size - 1
+                    )
                 )
               }
               className="h-9 w-9 rounded-lg border border-ink/15 font-semibold hover:bg-white/60"
@@ -423,16 +751,21 @@ export default function ReaderPage({ params }) {
               A−
             </button>
 
-            <span className="text-xs text-ink/50">
+            <span className="hidden text-xs text-ink/50 sm:block">
               {fontSize}px
             </span>
 
             {/* Font increase */}
+
             <button
               type="button"
               onClick={() =>
-                setFontSize((size) =>
-                  Math.min(28, size + 2)
+                setFontSize(
+                  (size) =>
+                    Math.min(
+                      30,
+                      size + 1
+                    )
                 )
               }
               className="h-9 w-9 rounded-lg border border-ink/15 font-semibold hover:bg-white/60"
@@ -441,25 +774,27 @@ export default function ReaderPage({ params }) {
             </button>
 
             {/* Bookmark */}
+
             <button
               type="button"
               onClick={() =>
                 setBookmarked(
-                  (value) => !value
+                  (value) =>
+                    !value
                 )
               }
-              className="ml-2 h-9 rounded-lg border border-ink/15 px-3 text-sm hover:bg-white/60"
+              className="ml-1 h-9 rounded-lg border border-ink/15 px-3 text-sm hover:bg-white/60"
             >
               {bookmarked
                 ? "★ Saved"
                 : "☆ Bookmark"}
             </button>
+
           </div>
         </div>
 
-        {/* ==================================================
-            REAL READING PROGRESS BAR
-        ================================================== */}
+        {/* Progress bar */}
+
         <div className="h-1 w-full bg-ink/10">
 
           <div
@@ -470,13 +805,14 @@ export default function ReaderPage({ params }) {
           />
 
         </div>
-
       </div>
 
+
       {/* ======================================================
-          PROGRESS INFORMATION
+          READING PROGRESS
       ====================================================== */}
-      <div className="mx-auto max-w-3xl px-5 pt-5">
+
+      <div className="mx-auto max-w-3xl px-5 pt-6">
 
         <div className="flex items-center justify-between text-xs text-ink/50">
 
@@ -489,152 +825,104 @@ export default function ReaderPage({ params }) {
           </span>
 
         </div>
-
       </div>
 
+
       {/* ======================================================
-          READER CONTENT
+          BOOK HEADER
       ====================================================== */}
-      <article className="mx-auto max-w-3xl px-5 py-14">
 
-        {/* Chapter label */}
-        <p className="text-center text-xs font-bold uppercase tracking-[.25em] text-gold">
+      <article className="mx-auto w-full max-w-4xl px-5 py-10 sm:px-8 lg:px-10">
 
-          {currentChapter
-            ? `Chapter ${chapterNumber(
-                currentChapter,
-                chapterIndex
-              )}`
-            : "Book"}
-
-        </p>
-
-        {/* Chapter title */}
-        <h1 className="mt-4 text-center font-display text-4xl font-bold leading-tight sm:text-5xl">
-
-          {currentChapter
-            ? chapterTitle(
-                currentChapter,
-                chapterIndex
-              )
-            : book.title}
-
+        <h1 className="mx-auto max-w-3xl text-center font-display text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">
+          {book.title}
         </h1>
 
-        {/* Author */}
-        <p className="mt-2 text-center text-sm text-ink/50">
+        <p className="mt-3 text-center text-sm text-ink/50">
           {book.author_name ||
             "Unknown author"}
         </p>
 
-        {/* Saved location */}
         {savedLocation && (
           <p className="mt-3 text-center text-xs text-ink/40">
             Your progress is saved
           </p>
         )}
 
-        {/* Error */}
         {error && (
-          <div className="mt-8 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <div className="mx-auto mt-8 max-w-3xl rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             {error}
           </div>
         )}
 
-        {/* Chapter loading */}
-        {chapterLoading ? (
 
-          <div className="mt-12 text-center text-ink/50">
-            Loading chapters...
+        {/* ====================================================
+            HIDDEN MEASURING PAGE
+
+            IMPORTANT:
+            This is what calculates the real page height.
+        ==================================================== */}
+
+        <div
+          ref={measureRef}
+          aria-hidden="true"
+          className="
+            pointer-events-none
+            invisible
+            absolute
+            left-[-99999px]
+            top-0
+            overflow-hidden
+
+            reader-page
+            reader-content
+          "
+         style={{
+  position: "fixed",
+  left: "-10000px",
+  top: "0",
+  width:
+    typeof window !== "undefined" &&
+    window.innerWidth <= 640
+      ? "calc(100vw - 40px)"
+      : "760px",
+  height:
+    typeof window !== "undefined" &&
+    window.innerWidth <= 640
+      ? "650px"
+      : "720px",
+  padding:
+    typeof window !== "undefined" &&
+    window.innerWidth <= 640
+      ? "32px 20px"
+      : "56px 64px",
+  boxSizing: "border-box",
+  visibility: "hidden",
+  fontSize: `${fontSize}px`,
+  lineHeight: "1.9",
+  letterSpacing: "0.01em",
+}}
+        />
+
+
+        {/* ====================================================
+            PAGINATION LOADING
+        ==================================================== */}
+
+        {!paginationReady ? (
+          <div className="mt-16 text-center text-ink/50">
+            Preparing pages...
           </div>
-
-        ) : chapters.length > 0 &&
-          currentChapter ? (
-
-          <>
-
-            {/* =================================================
-                ACTUAL BOOK CONTENT
-            ================================================= */}
-            <div
-              ref={contentRef}
-              className="mt-12 whitespace-pre-wrap font-reading leading-[1.9] text-ink/80"
-              style={{
-                fontSize: `${fontSize}px`,
-              }}
-            >
-              {content}
-            </div>
-
-            {/* =================================================
-                CHAPTER NAVIGATION
-            ================================================= */}
-            <div className="mt-14 flex items-center justify-between border-t border-ink/10 pt-6 text-sm">
-
-              {/* Previous */}
-              <button
-                type="button"
-                disabled={chapterIndex === 0}
-                onClick={() =>
-                  setChapterIndex(
-                    (index) =>
-                      Math.max(
-                        0,
-                        index - 1
-                      )
-                  )
-                }
-                className="font-semibold disabled:cursor-not-allowed disabled:text-ink/30"
-              >
-                ← Previous
-              </button>
-
-              {/* Chapter count */}
-              <span className="text-ink/45">
-                {chapterIndex + 1} /{" "}
-                {chapters.length}
-              </span>
-
-              {/* Next */}
-              <button
-                type="button"
-                disabled={
-                  chapterIndex ===
-                  chapters.length - 1
-                }
-                onClick={() =>
-                  setChapterIndex(
-                    (index) =>
-                      Math.min(
-                        chapters.length - 1,
-                        index + 1
-                      )
-                  )
-                }
-                className="font-semibold disabled:cursor-not-allowed disabled:text-ink/30"
-              >
-                Next chapter →
-              </button>
-
-            </div>
-
-          </>
-
-        ) : (
-
-          /* ==================================================
-             NO CHAPTERS
-          ================================================== */
+        ) : pages.length === 0 ? (
           <div className="mt-12 rounded-2xl border border-ink/10 bg-white/50 p-6 text-center">
 
             <p className="font-semibold">
-              No readable chapters found.
+              No readable content found.
             </p>
 
             <p className="mt-2 text-sm text-ink/60">
               This book was found, but no
-              content is available in
-              book_chapters.
+              readable content is available.
             </p>
 
             <Link
@@ -645,7 +933,161 @@ export default function ReaderPage({ params }) {
             </Link>
 
           </div>
+        ) : (
+          <>
+            {/* ==================================================
+                REAL PAGE
+            ================================================== */}
 
+            <div
+              className="
+                reader-page
+                reader-content
+              "
+              style={{
+                fontSize: `${fontSize}px`,
+                lineHeight: "1.9",
+                letterSpacing: "0.01em",
+              }}
+            >
+
+              <div
+                className="
+                  reader-prose
+
+                  [&_p]:mb-6
+                  [&_p]:leading-[1.9]
+
+                  [&_h1]:mb-6
+                  [&_h1]:mt-8
+                  [&_h1]:font-display
+                  [&_h1]:text-3xl
+                  [&_h1]:font-bold
+
+                  [&_h2]:mb-5
+                  [&_h2]:mt-8
+                  [&_h2]:font-display
+                  [&_h2]:text-2xl
+                  [&_h2]:font-bold
+
+                  [&_h3]:mb-4
+                  [&_h3]:mt-7
+                  [&_h3]:font-display
+                  [&_h3]:text-xl
+                  [&_h3]:font-bold
+
+                  [&_blockquote]:my-7
+                  [&_blockquote]:border-l-4
+                  [&_blockquote]:border-gold
+                  [&_blockquote]:pl-5
+                  [&_blockquote]:italic
+                  [&_blockquote]:text-ink/65
+
+                  [&_ul]:my-5
+                  [&_ul]:space-y-2
+
+                  [&_ol]:my-5
+                  [&_ol]:space-y-2
+
+                  [&_li]:leading-[1.9]
+
+                  [&_img]:mx-auto
+                  [&_img]:my-8
+                  [&_img]:block
+                  [&_img]:h-auto
+                  [&_img]:max-w-full
+                  [&_img]:rounded-xl
+                "
+                dangerouslySetInnerHTML={{
+                  __html:
+                    currentPage,
+                }}
+              />
+
+            </div>
+
+
+            {/* ==================================================
+                PAGE NAVIGATION
+            ================================================== */}
+
+            <div className="mx-auto mt-8 flex max-w-3xl items-center justify-between gap-3">
+
+              {/* Previous */}
+
+              <button
+                type="button"
+                disabled={
+                  pageIndex === 0
+                }
+                onClick={() =>
+                  setPageIndex(
+                    (index) =>
+                      Math.max(
+                        0,
+                        index - 1
+                      )
+                  )
+                }
+                className="rounded-full border border-ink/15 px-4 py-2.5 text-sm font-semibold transition hover:bg-white/60 disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
+              >
+                ← Previous Page
+              </button>
+
+
+              {/* Page number */}
+
+              <span className="whitespace-nowrap text-sm font-semibold text-ink/60">
+                Page{" "}
+                {pageIndex + 1}{" "}
+                /{" "}
+                {pages.length}
+              </span>
+
+
+              {/* Next */}
+
+              <button
+                type="button"
+                disabled={
+                  pageIndex ===
+                  pages.length - 1
+                }
+                onClick={() =>
+                  setPageIndex(
+                    (index) =>
+                      Math.min(
+                        pages.length - 1,
+                        index + 1
+                      )
+                  )
+                }
+                className="rounded-full bg-ink px-4 py-2.5 text-sm font-semibold text-parchment transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-30 sm:px-5"
+              >
+                Next Page →
+              </button>
+
+            </div>
+
+
+            {/* ==================================================
+                PAGE INFORMATION
+            ================================================== */}
+
+            <div className="mt-6 text-center text-xs text-ink/40">
+
+              {pageIndex ===
+              pages.length - 1
+                ? "You reached the end of the book."
+                : `Page ${
+                    pageIndex + 1
+                  } of ${
+                    pages.length
+                  }`}
+
+            </div>
+
+          </>
         )}
 
       </article>

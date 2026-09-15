@@ -1,31 +1,52 @@
 const fs = require("fs/promises");
+const { pool } = require("../config/database");
 const bookModel = require("../models/bookModel");
 const chapterModel = require("../models/chapterModel");
 const { parseBook } = require("../services/bookParser");
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 async function listBooks(req, res, next) {
   try {
-    const { q, category, language, page, pageSize } = req.query;
+    const { q, category, language, year, page, pageSize } = req.query;
 
-    const books = await bookModel.searchBooks({
+    const dbInfo = await pool.query(`
+      SELECT
+        current_database() AS database_name,
+        current_schema() AS schema_name,
+        (SELECT COUNT(*) FROM books) AS books_count
+    `);
+
+    console.log("========== READIFY DATABASE CHECK ==========");
+    console.log(dbInfo.rows[0]);
+    console.log("============================================");
+
+    const result = await bookModel.searchBooks({
       q,
       categorySlug: category,
       languageCode: language,
+      year,
       page: Number(page) || 1,
       pageSize: Math.min(Number(pageSize) || 20, 100),
     });
 
     res.json({
-      books,
-      page: Number(page) || 1,
+      books: result.books,
+      total: result.total,
+      page: result.page,
+      pageSize: result.pageSize,
+      totalPages: result.totalPages,
     });
   } catch (err) {
     next(err);
   }
 }
-
 async function getBook(req, res, next) {
   try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: "Invalid book id." });
+    }
+
     const book = await bookModel.findBookById(req.params.id);
 
     if (!book) {
@@ -174,6 +195,10 @@ async function uploadBook(req, res, next) {
 }
 async function getChapters(req, res, next) {
   try {
+    if (!UUID_RE.test(req.params.id)) {
+      return res.status(400).json({ error: "Invalid book id." });
+    }
+
     const book = await bookModel.findBookById(req.params.id);
 
     if (!book) {
