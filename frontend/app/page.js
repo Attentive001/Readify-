@@ -1,6 +1,5 @@
 import { api } from "../lib/api";
 import BookCard from "../components/BookCard";
-import SearchBar from "../components/SearchBar";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +70,7 @@ export default async function HomePage() {
 
       {/* ================= HERO ================= */}
       <section className="relative overflow-hidden">
-        <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-16 lg:grid-cols-[1.1fr_.9fr] lg:px-8 lg:pb-28 lg:pt-24">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-5 pb-20 pt-2 lg:grid-cols-[1.1fr_.9fr] lg:px-8 lg:pb-8 lg:pt-2">
 
           <div>
             <p className="mb-5 text-xs font-bold uppercase tracking-[.25em] text-gold">
@@ -89,71 +88,72 @@ export default async function HomePage() {
               library, and keep your reading journey moving
               wherever you go.
             </p>
-
-            <div className="mt-8">
-              <SearchBar large />
-            </div>
-
-            <div className="mt-5 flex gap-5 text-xs text-ink/55">
-              <span>✓ Read anywhere</span>
-              <span>✓ Personal library</span>
-              <span>✓ Complete books</span>
-            </div>
           </div>
+{/* Decorative books */}
+<div className="relative hidden min-h-[420px] lg:block">
+  {allBooks.slice(0, 3).map((book, index) => {
+    const cover =
+      book.cover_url ||
+      book.coverUrl ||
+      book.thumbnail ||
+      book.image_url ||
+      "";
 
-          {/* Decorative books */}
-          <div className="relative hidden h-[430px] lg:block">
-
-            <div className="absolute right-8 top-0 flex h-80 w-64 rotate-6 flex-col justify-between rounded-[2rem] bg-gradient-to-br from-amber-700 via-yellow-600 to-stone-900 p-7 text-white shadow-2xl">
-
-              <span className="text-xs uppercase tracking-[.25em] text-white/60">
-                Readify
+    return (
+      <div
+        key={book.id || `${book.title}-${index}`}
+        className={`absolute w-[190px] overflow-hidden rounded-2xl border border-white/20 bg-white/10 shadow-2xl backdrop-blur-sm transition-transform duration-300 hover:-translate-y-2 ${
+          index === 0
+            ? "right-8 top-4 rotate-6"
+            : index === 1
+            ? "right-40 top-32 -rotate-6"
+            : "right-0 top-64 rotate-3"
+        }`}
+      >
+        <div className="aspect-[2/3] bg-ink/10">
+          {cover ? (
+            <img
+              src={cover}
+              alt={book.title || "Book cover"}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center p-5 text-center">
+              <span className="font-display text-lg font-bold text-white">
+                {book.title || "Readify"}
               </span>
-
-              <div>
-                <div className="mb-4 h-px w-12 bg-white/50" />
-
-                <h2 className="font-display text-3xl font-bold">
-                  Atomic
-                  <br />
-                  Habits
-                </h2>
-
-                <p className="mt-3 text-sm text-white/65">
-                  James Clear
-                </p>
-              </div>
-
             </div>
-
-            <div className="absolute left-10 top-20 flex h-72 w-56 -rotate-8 flex-col justify-between rounded-[2rem] bg-gradient-to-br from-slate-800 via-blue-700 to-indigo-950 p-6 text-white shadow-xl">
-
-              <span className="text-xs uppercase tracking-[.25em] text-white/60">
-                Readify
-              </span>
-
-              <div>
-                <h2 className="font-display text-2xl font-bold">
-                  Deep
-                  <br />
-                  Work
-                </h2>
-
-                <p className="mt-3 text-sm text-white/65">
-                  Cal Newport
-                </p>
-              </div>
-
-            </div>
-
-          </div>
-
+          )}
         </div>
+
+        <div className="bg-black/30 p-3 text-white">
+          <p className="truncate text-sm font-semibold">
+            {book.title}
+          </p>
+
+          {book.author_name && (
+            <p className="mt-1 truncate text-xs text-white/60">
+              {book.author_name}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  })}
+
+  {/* Readify label */}
+  <div className="absolute bottom-4 left-4">
+    <span className="text-xs uppercase tracking-[.25em] text-white/60">
+      Readify
+    </span>
+  </div>
+</div>
+                
+            </div>
       </section>
 
-
       {/* ================= ALL BOOKS ================= */}
-      <section className="mx-auto max-w-7xl px-5 lg:px-8">
+      <section className="mx-auto max-w-7xl px-5 lg:px-3">
 
         <div className="mb-5 flex items-end justify-between">
 

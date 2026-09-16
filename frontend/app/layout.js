@@ -1,5 +1,6 @@
 import "../styles/globals.css";
 import Navbar from "../components/Navbar";
+import Sidebar from "../components/Sidebar";
 import Footer from "../components/Footer";
 
 export const metadata = {
@@ -22,8 +23,16 @@ export default function RootLayout({ children }) {
 
       <body className="min-h-screen font-sans text-ink">
         <Navbar />
-        {children}
-        <Footer />
+
+        <Sidebar />
+
+        <main className="min-h-[calc(100vh-60px)] lg:ml-[260px]">
+          {children}
+        </main>
+
+        <div className="lg:ml-[260px]">
+          <Footer />
+        </div>
       </body>
     </html>
   );

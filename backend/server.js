@@ -12,6 +12,7 @@ const searchRoutes = require("./routes/searchRoutes");
 const libraryRoutes = require("./routes/libraryRoutes");
 const readingRoutes = require("./routes/readingRoutes");
 const progressRoutes = require("./routes/progressRoutes");
+const profileRoutes = require("./routes/profileRoutes");
 const { notFound, errorHandler } = require("./middleware/errorMiddleware");
 
 const app = express();
@@ -44,6 +45,7 @@ v1.use("/search", searchRoutes);
 v1.use("/library", libraryRoutes);
 v1.use("/books", readingRoutes); // adds /:id/progress and /:id/bookmarks under /books
 v1.use("/books", progressRoutes);
+v1.use("/profile", profileRoutes);
 app.use("/api/v1", v1);
 
 app.use(notFound);

@@ -76,7 +76,7 @@ export const api = {
     request("/categories"),
 
   getCategoryBooks: (slug) =>
-    request(`/categories/${slug}/books`),
+     request(`/categories/${slug}/books`),
 
   // =========================
   // AUTH
