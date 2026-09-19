@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import T from "../../components/T";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:4000/api/v1";
@@ -113,7 +114,7 @@ export default function RegisterPage() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-gray-900">
-            Create Account
+            <T k="createAccount" />
           </h1>
 
           <p className="mt-2 text-gray-600">
@@ -148,7 +149,7 @@ export default function RegisterPage() {
                 htmlFor="displayName"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Name
+                <T k="name" />
               </label>
 
               <input
@@ -169,7 +170,7 @@ export default function RegisterPage() {
                 htmlFor="email"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Email
+                <T k="email" />
               </label>
 
               <input
@@ -190,7 +191,7 @@ export default function RegisterPage() {
                 htmlFor="password"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Password
+                <T k="password" />
               </label>
 
               <input
@@ -211,7 +212,7 @@ export default function RegisterPage() {
                 htmlFor="confirmPassword"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Confirm Password
+                <T k="confirmPassword" />
               </label>
 
               <input
@@ -233,7 +234,7 @@ export default function RegisterPage() {
             disabled={loading}
             className="mt-6 w-full rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? "Creating Account..." : "Create Account"}
+            {loading ? <T k="creatingAccount" /> : <T k="createAccount" />}
           </button>
         </form>
 
@@ -244,7 +245,7 @@ export default function RegisterPage() {
             href="/login"
             className="font-semibold text-blue-600 hover:text-blue-700"
           >
-            Sign In
+            <T k="signIn" />
           </a>
         </p>
       </div>

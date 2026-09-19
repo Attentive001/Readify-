@@ -3,6 +3,7 @@ import { api } from "../../../lib/api";
 import BookCard from "../../../components/BookCard";
 import AddToLibraryButton from "../../../components/AddToLibraryButton";
 
+import T from "../../../components/T";
 export default async function BookPage({ params }) {
   let book = null;
 
@@ -19,9 +20,9 @@ try {
   if (!book) {
     return (
       <main className="mx-auto max-w-4xl px-5 py-16">
-        <h1 className="font-display text-3xl font-bold">Book not found</h1>
+        <h1 className="font-display text-3xl font-bold"><T k="bookNotFound" /></h1>
         <Link href="/search" className="mt-5 inline-block underline">
-          Back to search
+          <T k="backToSearch" />
         </Link>
       </main>
     );
@@ -36,7 +37,7 @@ try {
   return (
     <main className="mx-auto max-w-6xl px-5 py-12 lg:px-8">
       <Link href="/" className="text-sm text-ink/55 hover:text-ink">
-        ← Back to discover
+        <T k="backDiscover" />
       </Link>
 
       <section className="mt-8 grid items-start gap-10 md:grid-cols-[280px_1fr]">
@@ -81,13 +82,13 @@ try {
               href={`/reader/${book.id}`}
               className="rounded-full bg-ink px-6 py-3 text-sm font-bold text-parchment"
             >
-              Read now →
+              <T k="readNow" />
             </Link>
 
             <AddToLibraryButton bookId={book.id} />
 
             <button className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold hover:bg-white/50">
-              ▶ Listen
+              ▶ <T k="listen" />
             </button>
           </div>
         </div>
@@ -95,7 +96,7 @@ try {
 
       <section className="mt-16 border-t border-ink/10 pt-10">
         <h2 className="font-display text-2xl font-bold">
-          About this book
+          <T k="aboutBook" />
         </h2>
 
         <p className="mt-3 max-w-3xl text-sm leading-7 text-ink/60">

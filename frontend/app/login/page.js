@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import T from "../../components/T";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:4000/api/v1";
@@ -89,11 +90,11 @@ export default function LoginPage() {
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-gray-900">
-            Welcome Back
+            <T k="welcomeBack" />
           </h1>
 
           <p className="mt-2 text-gray-600">
-            Sign in to continue reading your books.
+            <T k="signInContinue" />
           </p>
         </div>
 
@@ -113,7 +114,7 @@ export default function LoginPage() {
                 htmlFor="email"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Email
+                <T k="email" />
               </label>
 
               <input
@@ -133,7 +134,7 @@ export default function LoginPage() {
                 htmlFor="password"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Password
+                <T k="password" />
               </label>
 
               <input

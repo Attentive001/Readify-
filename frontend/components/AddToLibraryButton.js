@@ -1,99 +1,186 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import T from "./T";
+
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:4000/api/v1";
 
 export default function AddToLibraryButton({ bookId }) {
-  const [showConfirm, setShowConfirm] = useState(false);
+  const router = useRouter();
+
+  const [added, setAdded] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
+  const [checking, setChecking] = useState(true);
+  const [error, setError] = useState("");
 
-  async function addToLibrary() {
-    try {
-      setLoading(true);
-      setMessage("");
+  function getToken() {
+    if (typeof window === "undefined") {
+      return null;
+    }
 
-      const token = localStorage.getItem("token");
+    return (
+      localStorage.getItem("readify_token") ||
+      localStorage.getItem("token")
+    );
+  }
 
-      if (!token) {
-        setMessage("Please sign in first.");
+  useEffect(() => {
+    async function checkLibrary() {
+      const token = getToken();
+
+      if (!token || !bookId) {
+        setChecking(false);
         return;
       }
 
+      try {
+        const response = await fetch(
+          `${API_URL}/library`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          setChecking(false);
+          return;
+        }
+
+        const data = await response.json();
+
+        const books = Array.isArray(data.books)
+          ? data.books
+          : [];
+
+        const exists = books.some(
+          (book) =>
+            String(book.id) === String(bookId)
+        );
+
+        setAdded(exists);
+      } catch (err) {
+        console.error(
+          "Failed to check library:",
+          err
+        );
+      } finally {
+        setChecking(false);
+      }
+    }
+
+    checkLibrary();
+  }, [bookId]);
+
+  async function handleAddToLibrary() {
+    const token = getToken();
+
+    if (!token) {
+      setError("Please sign in first.");
+      return;
+    }
+
+    if (!bookId) {
+      setError("Book ID is missing.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
       const response = await fetch(
-        `http://localhost:4000/api/v1/library/${bookId}`,
+        `${API_URL}/library/${bookId}`,
         {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         }
       );
 
-      const data = await response.json().catch(() => ({}));
+      const data = await response
+        .json()
+        .catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
-          data.error || "Failed to add book to library."
+          data.error ||
+            "Failed to add book to library."
         );
       }
 
-      setShowConfirm(false);
-      setMessage("✓ Added to your library.");
-    } catch (error) {
-      setMessage(error.message);
+      setAdded(true);
+
+      // Refresh the current page so the
+      // library state is immediately updated.
+      router.refresh();
+    } catch (err) {
+      console.error(
+        "Add to library error:",
+        err
+      );
+
+      setError(
+        err.message ||
+          "Failed to add book to library."
+      );
     } finally {
       setLoading(false);
     }
+  }
+
+  if (checking) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold opacity-50"
+      >
+        ...
+      </button>
+    );
+  }
+
+  if (added) {
+    return (
+      <button
+        type="button"
+        disabled
+        className="rounded-full bg-amber-300 px-6 py-3 text-sm font-bold text-ink"
+      >
+        ✓ <T k="added" />
+      </button>
+    );
   }
 
   return (
     <div>
       <button
         type="button"
-        onClick={() => setShowConfirm(true)}
-        className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold hover:bg-white/50"
+        onClick={handleAddToLibrary}
+        disabled={loading}
+        className="rounded-full border border-ink/15 px-6 py-3 text-sm font-bold transition hover:bg-white/50 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        ♡ Add to library
+        {loading ? (
+          "Adding..."
+        ) : (
+          <>
+            + <T k="addToLibrary" />
+          </>
+        )}
       </button>
 
-      {message && (
-        <p className="mt-3 text-sm font-semibold text-green-700">
-          {message}
+      {error && (
+        <p className="mt-2 text-xs text-red-600">
+          {error}
         </p>
-      )}
-
-      {showConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-5">
-          <div className="w-full max-w-md rounded-3xl bg-white p-7 shadow-2xl">
-            <h2 className="font-display text-2xl font-bold text-ink">
-              Add to Library?
-            </h2>
-
-            <p className="mt-3 text-sm leading-6 text-ink/60">
-              Do you want to add this book to your personal library?
-            </p>
-
-            <div className="mt-7 flex gap-3">
-              <button
-                type="button"
-                onClick={() => setShowConfirm(false)}
-                disabled={loading}
-                className="flex-1 rounded-full border border-ink/15 px-5 py-3 text-sm font-bold"
-              >
-                No
-              </button>
-
-              <button
-                type="button"
-                onClick={addToLibrary}
-                disabled={loading}
-                className="flex-1 rounded-full bg-ink px-5 py-3 text-sm font-bold text-parchment disabled:opacity-50"
-              >
-                {loading ? "Adding..." : "Yes, Add"}
-              </button>
-            </div>
-          </div>
-        </div>
       )}
     </div>
   );

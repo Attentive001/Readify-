@@ -1,6 +1,7 @@
 import { api } from "../lib/api";
 import BookCard from "../components/BookCard";
 
+import T from "../components/T";
 export const dynamic = "force-dynamic";
 
 async function getBooks(fn) {
@@ -74,19 +75,17 @@ export default async function HomePage() {
 
           <div>
             <p className="mb-5 text-xs font-bold uppercase tracking-[.25em] text-gold">
-              Your digital bookshelf
+              <T k="yourDigitalBookshelf" />
             </p>
 
             <h1 className="font-display text-5xl font-bold leading-[.95] tracking-tight sm:text-6xl lg:text-7xl">
-              Discover.
+              <T k="discover" />.
               <br />
-              <span className="text-gold">Read.</span> Learn.
+              <span className="text-gold"><T k="read" />.</span> <T k="learn" />.
             </h1>
 
             <p className="mt-6 max-w-xl text-base leading-7 text-ink/65 sm:text-lg">
-              Find your next great book, build your personal
-              library, and keep your reading journey moving
-              wherever you go.
+              <T k="heroDescription" />
             </p>
           </div>
 {/* Decorative books */}
@@ -159,11 +158,11 @@ export default async function HomePage() {
 
           <div>
             <p className="text-xs font-bold uppercase tracking-[.2em] text-gold">
-              Readify Library
+              <T k="readifyLibrary" />
             </p>
 
             <h2 className="mt-1 font-display text-3xl font-bold">
-              All books
+              <T k="allBooks" />
             </h2>
           </div>
 
@@ -178,12 +177,11 @@ export default async function HomePage() {
           <div className="rounded-2xl border border-ink/10 bg-white/50 p-10 text-center">
 
             <h3 className="font-display text-xl font-bold">
-              No books found
+              <T k="noBooks" />
             </h3>
 
             <p className="mt-2 text-sm text-ink/55">
-              Upload a book from the admin page to add it
-              to the Readify library.
+              <T k="uploadAdmin" />
             </p>
 
           </div>
@@ -215,11 +213,11 @@ export default async function HomePage() {
 
             <div>
               <p className="text-xs font-bold uppercase tracking-[.2em] text-gold">
-                Curated for you
+                <T k="curated" />
               </p>
 
               <h2 className="mt-1 font-display text-3xl font-bold">
-                Featured books
+                <T k="featured" />
               </h2>
             </div>
 
@@ -227,7 +225,7 @@ export default async function HomePage() {
               href="/search"
               className="text-sm font-semibold hover:underline"
             >
-              View all →
+              <T k="viewAll" />
             </a>
 
           </div>
@@ -257,11 +255,11 @@ export default async function HomePage() {
 
             <div>
               <p className="text-xs font-bold uppercase tracking-[.2em] text-gold">
-                Readers are choosing
+                <T k="readersChoosing" />
               </p>
 
               <h2 className="mt-1 font-display text-3xl font-bold">
-                Popular right now
+                <T k="popular" />
               </h2>
             </div>
 
@@ -269,7 +267,7 @@ export default async function HomePage() {
               href="/search"
               className="text-sm font-semibold hover:underline"
             >
-              Explore →
+              <T k="explore" />
             </a>
 
           </div>
@@ -298,11 +296,11 @@ export default async function HomePage() {
           <div className="mb-10">
 
             <p className="text-xs font-bold uppercase tracking-[.2em] text-gold">
-              Browse by interest
+              <T k="browseInterest" />
             </p>
 
             <h2 className="mt-1 font-display text-3xl font-bold">
-              Explore categories
+              <T k="exploreCategories" />
             </h2>
 
           </div>
@@ -328,7 +326,7 @@ export default async function HomePage() {
                     href={`/categories/${category.slug}`}
                     className="text-sm font-semibold hover:underline"
                   >
-                    View all →
+                    <T k="viewAll" />
                   </a>
 
                 </div>
@@ -366,7 +364,7 @@ export default async function HomePage() {
           <div className="rounded-2xl border border-ink/10 bg-white/50 p-10">
 
             <h2 className="font-display text-2xl font-bold">
-              No books available yet
+              <T k="noBooksYet" />
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-ink/60">
@@ -389,11 +387,11 @@ export default async function HomePage() {
           <div>
 
             <p className="text-xs font-bold uppercase tracking-[.2em] text-amber-300">
-              Keep your journey
+              <T k="keepJourney" />
             </p>
 
             <h2 className="mt-2 font-display text-3xl font-bold sm:text-4xl">
-              Your next chapter starts here.
+              <T k="nextChapter" />
             </h2>
 
             <p className="mt-3 max-w-lg text-sm text-parchment/65">
@@ -407,7 +405,7 @@ export default async function HomePage() {
             href="/library"
             className="shrink-0 rounded-full bg-parchment px-6 py-3 text-sm font-bold text-ink"
           >
-            Open my library
+            <T k="openLibrary" />
           </a>
 
         </div>

@@ -8,6 +8,8 @@ import { Document, Page, pdfjs } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 
+import T from "../../../components/T";
+
 // PDF.js worker
 pdfjs.GlobalWorkerOptions.workerSrc =
   `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`;
@@ -35,6 +37,26 @@ export default function ReaderPage() {
 
   const [inputPage, setInputPage] = useState("1");
 
+  // =========================================================
+  // BOOKMARK STATE
+  // =========================================================
+  const [bookmarks, setBookmarks] = useState([]);
+  const [bookmarkLoading, setBookmarkLoading] = useState(false);
+  const [bookmarkError, setBookmarkError] = useState("");
+
+  const currentLocation = `page:${pageNumber}`;
+
+  const currentBookmark = useMemo(() => {
+    return bookmarks.find(
+      (bookmark) => bookmark.location === currentLocation
+    );
+  }, [bookmarks, currentLocation]);
+
+  const isBookmarked = Boolean(currentBookmark);
+
+  // =========================================================
+  // LOAD BOOK
+  // =========================================================
   useEffect(() => {
     if (!bookId) return;
 
@@ -72,6 +94,173 @@ export default function ReaderPage() {
     };
   }, [bookId]);
 
+  // =========================================================
+  // LOAD BOOKMARKS
+  // =========================================================
+  useEffect(() => {
+    if (!bookId) return;
+
+    let cancelled = false;
+
+    async function loadBookmarks() {
+      try {
+        setBookmarkError("");
+
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("readify_token") ||
+              localStorage.getItem("token")
+            : null;
+
+        if (!token) {
+          setBookmarks([]);
+          return;
+        }
+
+        const response = await fetch(
+          `${API_URL}/books/${bookId}/bookmarks`,
+          {
+            method: "GET",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+            cache: "no-store",
+          }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to load bookmarks."
+          );
+        }
+
+        if (!cancelled) {
+          setBookmarks(
+            Array.isArray(data.bookmarks)
+              ? data.bookmarks
+              : []
+          );
+        }
+      } catch (err) {
+        console.error("Load bookmarks error:", err);
+
+        if (!cancelled) {
+          setBookmarkError(
+            err?.message || "Failed to load bookmarks."
+          );
+        }
+      }
+    }
+
+    loadBookmarks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [bookId]);
+
+  // =========================================================
+  // ADD / REMOVE BOOKMARK
+  // =========================================================
+  async function toggleBookmark() {
+    if (!bookId) return;
+
+    const token =
+      typeof window !== "undefined"
+        ? localStorage.getItem("readify_token") ||
+          localStorage.getItem("token")
+        : null;
+
+    if (!token) {
+      setBookmarkError("Please sign in first to use bookmarks.");
+      return;
+    }
+
+    setBookmarkLoading(true);
+    setBookmarkError("");
+
+    try {
+      if (isBookmarked) {
+        const response = await fetch(
+          `${API_URL}/books/${bookId}/bookmarks?location=${encodeURIComponent(
+            currentLocation
+          )}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to remove bookmark."
+          );
+        }
+
+        setBookmarks((current) =>
+          current.filter(
+            (bookmark) =>
+              bookmark.location !== currentLocation
+          )
+        );
+      } else {
+        const response = await fetch(
+          `${API_URL}/books/${bookId}/bookmarks`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              location: currentLocation,
+              note: `Page ${pageNumber}`,
+            }),
+          }
+        );
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "Failed to save bookmark."
+          );
+        }
+
+        if (data.bookmark) {
+          setBookmarks((current) => {
+            const withoutDuplicate = current.filter(
+              (bookmark) =>
+                bookmark.location !== currentLocation
+            );
+
+            return [
+              data.bookmark,
+              ...withoutDuplicate,
+            ];
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Bookmark error:", err);
+
+      setBookmarkError(
+        err?.message || "Bookmark operation failed."
+      );
+    } finally {
+      setBookmarkLoading(false);
+    }
+  }
+
+  // =========================================================
+  // PDF URL
+  // =========================================================
   const absoluteFileUrl = useMemo(() => {
     if (!book?.file_url) return "";
 
@@ -82,12 +271,18 @@ export default function ReaderPage() {
     return `${BACKEND_URL}${book.file_url}`;
   }, [book]);
 
+  // =========================================================
+  // PDF LOAD
+  // =========================================================
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
     setPageNumber(1);
     setInputPage("1");
   }
 
+  // =========================================================
+  // PAGE NAVIGATION
+  // =========================================================
   function goToPage(page) {
     if (!numPages) return;
 
@@ -134,15 +329,24 @@ export default function ReaderPage() {
     goToPage(value);
   }
 
+  // =========================================================
+  // ZOOM
+  // =========================================================
   function zoomOut() {
     setScale((current) =>
-      Math.max(0.7, Number((current - 0.1).toFixed(1)))
+      Math.max(
+        0.7,
+        Number((current - 0.1).toFixed(1))
+      )
     );
   }
 
   function zoomIn() {
     setScale((current) =>
-      Math.min(2, Number((current + 0.1).toFixed(1)))
+      Math.min(
+        2,
+        Number((current + 0.1).toFixed(1))
+      )
     );
   }
 
@@ -150,6 +354,9 @@ export default function ReaderPage() {
     setScale(1);
   }
 
+  // =========================================================
+  // KEYBOARD CONTROLS
+  // =========================================================
   useEffect(() => {
     function handleKeyboard(event) {
       if (event.key === "ArrowLeft") {
@@ -169,7 +376,10 @@ export default function ReaderPage() {
       }
     }
 
-    window.addEventListener("keydown", handleKeyboard);
+    window.addEventListener(
+      "keydown",
+      handleKeyboard
+    );
 
     return () => {
       window.removeEventListener(
@@ -179,43 +389,59 @@ export default function ReaderPage() {
     };
   }, [pageNumber, numPages]);
 
+  // =========================================================
+  // LOADING
+  // =========================================================
   if (loading) {
     return (
       <main className="reader-loading">
         <div className="reader-loading-card">
           <div className="reader-spinner" />
-          <p>Loading book...</p>
+
+          <p>
+            <T k="loadingBook" />
+          </p>
         </div>
       </main>
     );
   }
 
+  // =========================================================
+  // ERROR
+  // =========================================================
   if (error || !book) {
     return (
       <main className="reader-error">
         <div className="reader-error-card">
-          <h1>Unable to open this book</h1>
+          <h1>
+            <T k="unableOpenBook" />
+          </h1>
 
           <p>
-            {error || "Book not found."}
+            {error || <T k="bookNotFound" />}
           </p>
 
           <Link
             href="/books"
             className="reader-back-button"
           >
-            ← Back to books
+            <T k="backBooks" />
           </Link>
         </div>
       </main>
     );
   }
 
+  // =========================================================
+  // NO FILE
+  // =========================================================
   if (!absoluteFileUrl) {
     return (
       <main className="reader-error">
         <div className="reader-error-card">
-          <h1>No original file</h1>
+          <h1>
+            <T k="noOriginalFile" />
+          </h1>
 
           <p>
             This book exists in the database, but no
@@ -226,13 +452,16 @@ export default function ReaderPage() {
             href={`/books/${book.id}`}
             className="reader-back-button"
           >
-            ← Back to book
+            <T k="backBook" />
           </Link>
         </div>
       </main>
     );
   }
 
+  // =========================================================
+  // READER
+  // =========================================================
   return (
     <main className="reader-shell">
 
@@ -245,7 +474,7 @@ export default function ReaderPage() {
             href={`/books/${book.id}`}
             className="reader-back"
           >
-            ← Back
+            <T k="back" />
           </Link>
 
           <div className="reader-book-info">
@@ -259,7 +488,9 @@ export default function ReaderPage() {
         </div>
 
         <div className="reader-status">
-          <span>Page</span>
+          <span>
+            <T k="page" />
+          </span>
 
           <strong>
             {pageNumber}
@@ -284,7 +515,7 @@ export default function ReaderPage() {
             disabled={pageNumber <= 1}
             className="reader-control-button"
           >
-            ← Previous
+            <T k="previous" />
           </button>
 
           <form
@@ -308,7 +539,7 @@ export default function ReaderPage() {
               type="submit"
               className="reader-go-button"
             >
-              Go
+              <T k="go" />
             </button>
           </form>
 
@@ -321,7 +552,42 @@ export default function ReaderPage() {
             }
             className="reader-control-button"
           >
-            Next →
+            <T k="next" />
+          </button>
+
+        </div>
+
+
+        {/* =====================================================
+            BOOKMARK BUTTON
+            ===================================================== */}
+        <div className="reader-bookmark">
+
+          <button
+            type="button"
+            onClick={toggleBookmark}
+            disabled={bookmarkLoading}
+            className={`reader-control-button ${
+              isBookmarked
+                ? "reader-bookmark-active"
+                : ""
+            }`}
+            aria-label={
+              isBookmarked
+                ? "Remove bookmark"
+                : "Bookmark this page"
+            }
+            title={
+              isBookmarked
+                ? "Remove bookmark"
+                : "Bookmark this page"
+            }
+          >
+            {bookmarkLoading
+              ? "..."
+              : isBookmarked
+              ? "🔖 Bookmarked"
+              : "🔖 Bookmark"}
           </button>
 
         </div>
@@ -360,6 +626,19 @@ export default function ReaderPage() {
       </div>
 
 
+      {/* BOOKMARK ERROR */}
+      {bookmarkError && (
+        <div
+          className="mx-auto mt-3 max-w-5xl px-4"
+          role="alert"
+        >
+          <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-600">
+            {bookmarkError}
+          </p>
+        </div>
+      )}
+
+
       {/* BOOK */}
       <section className="reader-book-area">
 
@@ -367,19 +646,23 @@ export default function ReaderPage() {
           file={absoluteFileUrl}
           onLoadSuccess={onDocumentLoadSuccess}
           onLoadError={(err) => {
-            console.error("PDF loading error:", err);
+            console.error(
+              "PDF loading error:",
+              err
+            );
+
             setError(
               "The PDF could not be loaded."
             );
           }}
           loading={
             <div className="reader-pdf-loading">
-              Loading PDF...
+              <T k="loadingPdf" />
             </div>
           }
           error={
             <div className="reader-pdf-error">
-              Unable to display this PDF.
+              <T k="unablePdf" />
             </div>
           }
         >
@@ -411,21 +694,24 @@ export default function ReaderPage() {
             disabled={pageNumber <= 1}
             className="reader-bottom-button"
           >
-            ← Previous Page
+            <T k="previousPage" />
           </button>
 
           <div className="reader-page-counter">
-            Page <strong>{pageNumber}</strong> of{" "}
+            <T k="page" />{" "}
+            <strong>{pageNumber}</strong> /{" "}
             <strong>{numPages}</strong>
           </div>
 
           <button
             type="button"
             onClick={nextPage}
-            disabled={pageNumber >= numPages}
+            disabled={
+              pageNumber >= numPages
+            }
             className="reader-bottom-button"
           >
-            Next Page →
+            <T k="nextPage" />
           </button>
 
         </footer>

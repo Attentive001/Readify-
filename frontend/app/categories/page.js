@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { api } from "../../lib/api";
 import BookCard from "../../components/BookCard";
 
+import T from "../../components/T";
 const categoryIcons = [
   "✦",
   "◈",
@@ -217,11 +218,11 @@ export default function CategoriesPage() {
 
         <section>
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-gold">
-            Browse
+            <T k="browseBooks" />
           </p>
 
           <h1 className="mt-2 font-display text-4xl font-bold sm:text-5xl">
-            Book Categories
+            <T k="categories" />
           </h1>
 
           <p className="mt-3 max-w-2xl text-sm leading-6 text-ink/60 sm:text-base">
@@ -248,7 +249,7 @@ export default function CategoriesPage() {
 
           {categoriesLoading ? (
             <div className="rounded-2xl border border-ink/10 bg-white/50 p-10 text-center text-sm text-ink/60">
-              Loading categories...
+              <T k="loadingCategories" />
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
@@ -271,7 +272,7 @@ export default function CategoriesPage() {
                 </span>
 
                 <h2 className="mt-4 font-display font-bold">
-                  All Books
+                  <T k="allBooks" />
                 </h2>
 
                 <p
@@ -357,7 +358,7 @@ export default function CategoriesPage() {
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.15em] text-ink/40">
-                Books
+                <T k="books" />
               </p>
 
               <h2 className="mt-1 font-display text-2xl font-bold sm:text-3xl">
@@ -381,7 +382,7 @@ export default function CategoriesPage() {
               <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-ink/20 border-t-ink" />
 
               <p className="mt-4 text-sm text-ink/60">
-                Loading books...
+                <T k="loadingBooks" />
               </p>
             </div>
           ) : books.length > 0 ? (
@@ -404,7 +405,7 @@ export default function CategoriesPage() {
               </div>
 
               <h3 className="mt-5 font-display text-xl font-bold">
-                No books found
+                <T k="noBooks" />
               </h3>
 
               <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-ink/55">
@@ -421,7 +422,7 @@ export default function CategoriesPage() {
                   }
                   className="mt-5 rounded-full bg-ink px-5 py-2.5 text-sm font-semibold text-parchment transition hover:opacity-90"
                 >
-                  View all books
+                  <T k="viewAllBooks" />
                 </button>
               )}
             </div>

@@ -1,12 +1,16 @@
 "use client";
 
+import { useLanguage } from "../context/LanguageContext";
+
 import { useEffect, useRef, useState } from "react";
 
+import T from "./T";
 export default function ProfileModal({
   user,
   onClose,
   onLogout,
 }) {
+  const { t } = useLanguage();
   const [profile, setProfile] = useState(user || {});
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -234,7 +238,7 @@ export default function ProfileModal({
                   onClick={() => setEditing(true)}
                   className="mb-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
                 >
-                  Edit Profile
+                  <T k="editProfile" />
                 </button>
               ) : (
                 <div className="mb-2 flex gap-2">
@@ -244,7 +248,7 @@ export default function ProfileModal({
                     onClick={handleCancel}
                     className="rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-50"
                   >
-                    Cancel
+                    <T k="cancel" />
                   </button>
 
                   <button
@@ -279,7 +283,7 @@ export default function ProfileModal({
                 </p>
 
                 <div className="mt-3 inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-                  Readify Member
+                  <T k="readifyMember" />
                 </div>
 
               </div>
@@ -293,7 +297,7 @@ export default function ProfileModal({
                     htmlFor="profile-name"
                     className="mb-2 block text-sm font-semibold text-gray-700"
                   >
-                    Full Name
+                    <T k="fullName" />
                   </label>
 
                   <input
@@ -313,7 +317,7 @@ export default function ProfileModal({
                     htmlFor="profile-email"
                     className="mb-2 block text-sm font-semibold text-gray-700"
                   >
-                    Email
+                    <T k="email" />
                   </label>
 
                   <input
@@ -325,7 +329,7 @@ export default function ProfileModal({
                   />
 
                   <p className="mt-1 text-xs text-gray-400">
-                    Email cannot be changed here.
+                    <T k="emailCannot" />
                   </p>
                 </div>
 
@@ -336,7 +340,7 @@ export default function ProfileModal({
                     htmlFor="profile-bio"
                     className="mb-2 block text-sm font-semibold text-gray-700"
                   >
-                    Bio
+                    <T k="bio" />
                   </label>
 
                   <textarea
@@ -345,7 +349,7 @@ export default function ProfileModal({
                     rows={3}
                     value={profile.bio || ""}
                     onChange={handleChange}
-                    placeholder="Tell readers something about yourself..."
+                    placeholder={t("tellReaders")}
                     className="w-full resize-none rounded-xl border border-gray-200 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -360,7 +364,7 @@ export default function ProfileModal({
             <div className="mt-6 rounded-2xl bg-gray-50 p-5">
 
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">
-                About
+                <T k="about" />
               </p>
 
               <p className="mt-2 text-sm leading-6 text-gray-600">
@@ -382,7 +386,7 @@ export default function ProfileModal({
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Books
+                  <T k="books" />
                 </p>
               </div>
 
@@ -392,7 +396,7 @@ export default function ProfileModal({
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Bookmarks
+                  <T k="bookmarks" />
                 </p>
               </div>
 
@@ -402,7 +406,7 @@ export default function ProfileModal({
                 </p>
 
                 <p className="mt-1 text-xs text-gray-500">
-                  Progress
+                  <T k="progress" />
                 </p>
               </div>
 
@@ -429,11 +433,11 @@ export default function ProfileModal({
 
                   <div>
                     <p className="font-semibold text-gray-900">
-                      My Library
+                      <T k="myLibrary" />
                     </p>
 
                     <p className="text-xs text-gray-500">
-                      Your saved books
+                      <T k="savedBooks" />
                     </p>
                   </div>
 
@@ -455,11 +459,11 @@ export default function ProfileModal({
 
                   <div>
                     <p className="font-semibold text-gray-900">
-                      Bookmarks
+                      <T k="bookmarks" />
                     </p>
 
                     <p className="text-xs text-gray-500">
-                      Books you saved
+                      <T k="savedBooks" />
                     </p>
                   </div>
 
@@ -481,11 +485,11 @@ export default function ProfileModal({
 
                   <div>
                     <p className="font-semibold text-gray-900">
-                      Reading Progress
+                      <T k="readingProgress" />
                     </p>
 
                     <p className="text-xs text-gray-500">
-                      Continue your reading
+                      <T k="continueReading" />
                     </p>
                   </div>
 
@@ -507,11 +511,11 @@ export default function ProfileModal({
 
                   <div>
                     <p className="font-semibold text-red-700">
-                      Sign Out
+                      <T k="signOut" />
                     </p>
 
                     <p className="text-xs text-gray-500">
-                      Sign out of Readify
+                      <T k="signOutReadify" />
                     </p>
                   </div>
 

@@ -1,8 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
+import T from "./T";
 export default function SearchBar({ value = "", onChange, onSubmit, large = false }) {
+  const { t } = useLanguage();
   const [local, setLocal] = useState(value);
   const current = onChange ? value : local;
 
@@ -22,7 +25,7 @@ export default function SearchBar({ value = "", onChange, onSubmit, large = fals
         onChange={(e) =>
           onChange ? onChange(e.target.value) : setLocal(e.target.value)
         }
-        placeholder="Search title, author, ISBN..."
+        placeholder={t("searchPlaceholder")}
         className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm outline-none placeholder:text-ink/40"
       />
 
@@ -30,7 +33,7 @@ export default function SearchBar({ value = "", onChange, onSubmit, large = fals
         type="submit"
         className="rounded-xl bg-ink px-5 py-2.5 text-sm font-semibold text-parchment hover:opacity-90"
       >
-        Search
+        <T k="search" />
       </button>
     </form>
   );

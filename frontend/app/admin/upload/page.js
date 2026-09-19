@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import T from "../../../components/T";
 export default function UploadBookPage() {
   const [form, setForm] = useState({
     title: "",
@@ -183,11 +184,11 @@ export default function UploadBookPage() {
         {/* Header */}
         <div className="mb-8">
           <p className="text-sm font-bold uppercase tracking-wide text-blue-600">
-            Readify Admin
+            <T k="readifyAdmin" />
           </p>
 
           <h1 className="mt-2 text-3xl font-bold text-gray-900">
-            Upload Book
+            <T k="uploadBook" />
           </h1>
 
           <p className="mt-2 text-gray-600">
@@ -223,7 +224,7 @@ export default function UploadBookPage() {
                 htmlFor="title"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Book Title *
+                <T k="bookTitle" /> *
               </label>
 
               <input
@@ -243,7 +244,7 @@ export default function UploadBookPage() {
                 htmlFor="description"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Description *
+                <T k="description" /> *
               </label>
 
               <textarea
@@ -263,7 +264,7 @@ export default function UploadBookPage() {
                 htmlFor="authorName"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Author Name *
+                <T k="authorName" /> *
               </label>
 
               <input
@@ -283,7 +284,7 @@ export default function UploadBookPage() {
                 htmlFor="publishedYear"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Published Year *
+                <T k="publishedYear" /> *
               </label>
 
               <input
@@ -303,7 +304,7 @@ export default function UploadBookPage() {
                 htmlFor="languageCode"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Language Code *
+                <T k="languageCode" /> *
               </label>
 
               <input
@@ -323,7 +324,7 @@ export default function UploadBookPage() {
                 htmlFor="languageName"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Language Name *
+                <T k="languageName" /> *
               </label>
 
               <input
@@ -363,7 +364,7 @@ export default function UploadBookPage() {
                 htmlFor="rightsStatus"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Rights Status *
+                <T k="rightsStatus" /> *
               </label>
 
               <select
@@ -374,19 +375,19 @@ export default function UploadBookPage() {
                 className="w-full rounded-lg border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
               >
                 <option value="public_domain">
-                  Public Domain
+                  <T k="publicDomain" />
                 </option>
 
                 <option value="open_license">
-                  Open License
+                  <T k="openLicense" />
                 </option>
 
                 <option value="authorized">
-                  Authorized
+                  <T k="authorized" />
                 </option>
 
                 <option value="unknown">
-                  Unknown
+                  <T k="unknown" />
                 </option>
               </select>
             </div>
@@ -397,7 +398,7 @@ export default function UploadBookPage() {
                 htmlFor="coverUrl"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Cover URL
+                <T k="coverUrl" />
               </label>
 
               <input
@@ -417,7 +418,7 @@ export default function UploadBookPage() {
                 htmlFor="sourceUrl"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Source URL
+                <T k="sourceUrl" />
               </label>
 
               <input
@@ -447,55 +448,55 @@ export default function UploadBookPage() {
     onChange={handleChange}
     className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 outline-none focus:border-blue-500"
   >
-    <option value="">Select a category</option>
+    <option value=""><T k="selectCategory" /></option>
 
     <option value="Self-Development">
-      Self-Development
+      <T k="catSelfDevelopment" />
     </option>
 
     <option value="Business">
-      Business
+      <T k="catBusiness" />
     </option>
 
     <option value="Technology">
-      Technology
+      <T k="catTechnology" />
     </option>
 
     <option value="Science">
-      Science
+      <T k="catScience" />
     </option>
 
     <option value="History">
-      History
+      <T k="catHistory" />
     </option>
 
     <option value="Literature">
-      Literature
+      <T k="catLiterature" />
     </option>
 
     <option value="Philosophy">
-      Philosophy
+      <T k="catPhilosophy" />
     </option>
 
     <option value="Education">
-      Education
+      <T k="catEducation" />
     </option>
 
     <option value="Fiction">
-      Fiction
+      <T k="catFiction" />
     </option>
     
     <option value="Economics">
-      Economics
+      <T k="catEconomics" />
     </option>
 
     <option value="Christian Bible">
-      Christian Bible
+      <T k="catChristianBible" />
     </option>
   </select>
 
   <p className="mt-2 text-xs text-gray-500">
-    Select the category that best describes this book.
+    <T k="categoryHint" />
   </p>
 </div>
 
@@ -505,7 +506,7 @@ export default function UploadBookPage() {
                 htmlFor="book-file"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Book File *
+                <T k="bookFile" /> *
               </label>
 
               <input
@@ -524,7 +525,7 @@ export default function UploadBookPage() {
               {file && (
                 <div className="mt-3 rounded-lg bg-gray-50 px-4 py-3">
                   <p className="text-sm font-medium text-gray-800">
-                    Selected file
+                    <T k="selectedFile" />
                   </p>
 
                   <p className="mt-1 text-sm text-gray-600">

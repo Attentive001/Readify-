@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import T from "./T";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:4000/api/v1";
@@ -118,11 +119,11 @@ export default function LoginModal({ onClose, onRegister }) {
             id="login-modal-title"
             className="mt-2 text-3xl font-bold text-gray-900"
           >
-            Welcome Back
+            <T k="welcomeBack" />
           </h2>
 
           <p className="mt-2 text-sm text-gray-600">
-            Sign in to continue reading your books.
+            <T k="signInContinue" />
           </p>
         </div>
 
@@ -143,7 +144,7 @@ export default function LoginModal({ onClose, onRegister }) {
                 htmlFor="login-email"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Email
+                <T k="email" />
               </label>
 
               <input
@@ -166,14 +167,14 @@ export default function LoginModal({ onClose, onRegister }) {
                   htmlFor="login-password"
                   className="text-sm font-semibold text-gray-700"
                 >
-                  Password
+                  <T k="password" />
                 </label>
 
                 <button
                   type="button"
                   className="text-xs font-semibold text-blue-600 hover:text-blue-700"
                 >
-                  Forgot password?
+                  <T k="forgotPassword" />
                 </button>
               </div>
 
@@ -209,7 +210,7 @@ export default function LoginModal({ onClose, onRegister }) {
             onClick={onRegister}
             className="font-semibold text-blue-600 hover:text-blue-700"
           >
-            Create an account
+            <T k="createAccount" />
           </button>
         </div>
       </div>

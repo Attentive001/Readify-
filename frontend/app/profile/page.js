@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import T from "../../components/T";
 export default function ProfileModal({
   user,
   onClose,
@@ -79,7 +80,7 @@ export default function ProfileModal({
               type="button"
               className="mb-2 rounded-full border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
             >
-              Edit Profile
+              <T k="editProfile" />
             </button>
           </div>
 
@@ -97,14 +98,14 @@ export default function ProfileModal({
             </p>
 
             <div className="mt-3 inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-              Readify Member
+              <T k="readifyMember" />
             </div>
           </div>
 
           {/* BIO */}
           <div className="mt-6 rounded-2xl bg-gray-50 p-5">
             <p className="text-xs font-bold uppercase tracking-[0.16em] text-gray-400">
-              About
+              <T k="about" />
             </p>
 
             <p className="mt-2 text-sm leading-6 text-gray-600">
@@ -121,7 +122,7 @@ export default function ProfileModal({
                 0
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Books
+                <T k="books" />
               </p>
             </div>
 
@@ -130,7 +131,7 @@ export default function ProfileModal({
                 0
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Bookmarks
+                <T k="bookmarks" />
               </p>
             </div>
 
@@ -139,7 +140,7 @@ export default function ProfileModal({
                 0%
               </p>
               <p className="mt-1 text-xs text-gray-500">
-                Progress
+                <T k="progress" />
               </p>
             </div>
           </div>
@@ -159,11 +160,11 @@ export default function ProfileModal({
 
                 <div>
                   <p className="font-semibold text-gray-900">
-                    My Library
+                    <T k="myLibrary" />
                   </p>
 
                   <p className="text-xs text-gray-500">
-                    Your saved books
+                    <T k="savedBooks" />
                   </p>
                 </div>
               </div>
@@ -181,11 +182,11 @@ export default function ProfileModal({
 
                 <div>
                   <p className="font-semibold text-gray-900">
-                    Bookmarks
+                    <T k="bookmarks" />
                   </p>
 
                   <p className="text-xs text-gray-500">
-                    Books you saved
+                    <T k="savedBooks" />
                   </p>
                 </div>
               </div>
@@ -203,11 +204,11 @@ export default function ProfileModal({
 
                 <div>
                   <p className="font-semibold text-gray-900">
-                    Reading Progress
+                    <T k="readingProgress" />
                   </p>
 
                   <p className="text-xs text-gray-500">
-                    Continue your reading
+                    <T k="continueReading" />
                   </p>
                 </div>
               </div>
@@ -225,11 +226,11 @@ export default function ProfileModal({
 
                 <div>
                   <p className="font-semibold text-red-700">
-                    Sign Out
+                    <T k="signOut" />
                   </p>
 
                   <p className="text-xs text-gray-500">
-                    Sign out of Readify
+                    <T k="signOutReadify" />
                   </p>
                 </div>
               </div>

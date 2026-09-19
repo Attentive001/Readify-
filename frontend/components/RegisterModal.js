@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import T from "./T";
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   "http://localhost:4000/api/v1";
@@ -136,11 +137,11 @@ export default function RegisterModal({ onClose, onLogin }) {
             id="register-modal-title"
             className="mt-2 text-3xl font-bold text-gray-900"
           >
-            Create Account
+            <T k="createAccount" />
           </h2>
 
           <p className="mt-2 text-sm text-gray-600">
-            Join Readify and start building your library.
+            <T k="joinReadify" />
           </p>
         </div>
 
@@ -168,7 +169,7 @@ export default function RegisterModal({ onClose, onLogin }) {
                 htmlFor="register-name"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Full Name
+                <T k="fullName" />
               </label>
 
               <input
@@ -190,7 +191,7 @@ export default function RegisterModal({ onClose, onLogin }) {
                 htmlFor="register-email"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Email
+                <T k="email" />
               </label>
 
               <input
@@ -205,7 +206,7 @@ export default function RegisterModal({ onClose, onLogin }) {
               />
 
               <p className="mt-2 text-xs text-gray-500">
-                Gmail, Yahoo, Hotmail, Outlook, or another valid email.
+                <T k="validEmailHint" />
               </p>
             </div>
 
@@ -215,7 +216,7 @@ export default function RegisterModal({ onClose, onLogin }) {
                 htmlFor="register-password"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Password
+                <T k="password" />
               </label>
 
               <input
@@ -236,7 +237,7 @@ export default function RegisterModal({ onClose, onLogin }) {
                 htmlFor="register-confirm-password"
                 className="mb-2 block text-sm font-semibold text-gray-700"
               >
-                Confirm Password
+                <T k="confirmPassword" />
               </label>
 
               <input
@@ -271,7 +272,7 @@ export default function RegisterModal({ onClose, onLogin }) {
             onClick={onLogin}
             className="font-semibold text-blue-600 hover:text-blue-700"
           >
-            Sign In
+            <T k="signIn" />
           </button>
         </div>
       </div>

@@ -5,6 +5,7 @@ import LoginModal from "./LoginModal";
 import RegisterModal from "./RegisterModal";
 import ProfileModal from "./ProfileModal";
 
+import T from "./T";
 export default function Navbar() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
@@ -147,7 +148,7 @@ export default function Navbar() {
                 href={link.href}
                 className="text-ink/70 transition hover:text-ink"
               >
-                {link.label}
+                {link.href === "/" ? <T k="home" /> : <T k="search" />}
               </a>
             ))}
           </nav>
@@ -179,7 +180,7 @@ export default function Navbar() {
                   onClick={handleLogin}
                   className="hidden rounded-full border border-ink/15 px-4 py-2 text-sm font-semibold transition hover:bg-ink hover:text-parchment sm:flex"
                 >
-                  Sign In
+                  <T k="signIn" />
                 </button>
 
                 {/* DESKTOP REGISTER */}
@@ -189,7 +190,7 @@ export default function Navbar() {
                   onClick={handleRegister}
                   className="hidden rounded-full bg-ink px-4 py-2 text-sm font-semibold text-parchment transition hover:opacity-90 sm:flex"
                 >
-                  Register
+                  <T k="register" />
                 </button>
 
                 {/* MOBILE LOGIN */}
@@ -216,7 +217,7 @@ export default function Navbar() {
                 onClick={handleProfile}
                 className="grid h-10 w-10 place-items-center overflow-hidden rounded-full border border-ink/15 bg-parchment transition hover:bg-ink hover:text-parchment"
                 aria-label={`Open ${userName} profile`}
-                title="Profile"
+                title={userName}
               >
                 {avatarUrl ? (
                   <img

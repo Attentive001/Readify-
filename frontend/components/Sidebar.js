@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useLanguage } from "../context/LanguageContext";
 
+import T from "./T";
 const languages = [
   { code: "en", label: "English", flag: "🇬🇧" },
   { code: "rw", label: "Kinyarwanda", flag: "🇷🇼" },
@@ -29,49 +31,51 @@ const categories = [
 ];
 
 export default function Sidebar() {
+  const { language, setLanguage, t } = useLanguage();
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [categoriesOpen, setCategoriesOpen] = useState(true);
-  const [language, setLanguage] = useState("en");
+
+  // =========================
+  // SIDEBAR EVENTS
+  // =========================
 
   useEffect(() => {
-  const savedLanguage =
-    localStorage.getItem("readify_language");
+    function handleSidebarToggle() {
+      setMobileOpen((current) => !current);
+    }
 
-  if (savedLanguage) {
-    setLanguage(savedLanguage);
-  }
+    function handleSidebarClose() {
+      setMobileOpen(false);
+    }
 
-  function handleSidebarToggle() {
-    setMobileOpen((current) => !current);
-  }
-
-  function handleSidebarClose() {
-    setMobileOpen(false);
-  }
-
-  window.addEventListener(
-    "readify-sidebar-toggle",
-    handleSidebarToggle
-  );
-
-  window.addEventListener(
-    "readify-sidebar-close",
-    handleSidebarClose
-  );
-
-  return () => {
-    window.removeEventListener(
+    window.addEventListener(
       "readify-sidebar-toggle",
       handleSidebarToggle
     );
 
-    window.removeEventListener(
+    window.addEventListener(
       "readify-sidebar-close",
       handleSidebarClose
     );
-  };
-}, []);
+
+    return () => {
+      window.removeEventListener(
+        "readify-sidebar-toggle",
+        handleSidebarToggle
+      );
+
+      window.removeEventListener(
+        "readify-sidebar-close",
+        handleSidebarClose
+      );
+    };
+  }, []);
+
+  // =========================
+  // LOCK BODY WHEN MOBILE SIDEBAR IS OPEN
+  // =========================
 
   useEffect(() => {
     if (mobileOpen) {
@@ -85,6 +89,10 @@ export default function Sidebar() {
     };
   }, [mobileOpen]);
 
+  // =========================
+  // CLOSE MOBILE SIDEBAR
+  // =========================
+
   function closeMobileSidebar() {
     setMobileOpen(false);
 
@@ -93,25 +101,18 @@ export default function Sidebar() {
     );
   }
 
+  // =========================
+  // CHANGE LANGUAGE
+  // =========================
+
   function handleLanguageChange(code) {
     setLanguage(code);
-
-    localStorage.setItem(
-      "readify_language",
-      code
-    );
-
     setLanguageOpen(false);
-
-    window.dispatchEvent(
-      new CustomEvent(
-        "readify-language-change",
-        {
-          detail: code,
-        }
-      )
-    );
   }
+
+  // =========================
+  // SELECTED LANGUAGE
+  // =========================
 
   const selectedLanguage =
     languages.find(
@@ -158,8 +159,9 @@ export default function Sidebar() {
           lg:translate-x-0
         `}
       >
-
-        {/* MOBILE HEADER */}
+        {/* ==================================================
+            MOBILE HEADER
+        ================================================== */}
 
         <div className="flex items-center justify-between border-b border-ink/10 px-5 py-4 lg:hidden">
           <div>
@@ -168,7 +170,7 @@ export default function Sidebar() {
             </p>
 
             <p className="text-xs text-ink/50">
-              Browse books
+              {t("browseBooks")}
             </p>
           </div>
 
@@ -182,28 +184,36 @@ export default function Sidebar() {
           </button>
         </div>
 
-        {/* DESKTOP HEADER */}
+        {/* ==================================================
+            DESKTOP HEADER
+        ================================================== */}
 
         <div className="hidden border-b border-ink/10 px-5 py-5 lg:block">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-ink/40">
-            Browse
+            {t("discover")}
           </p>
 
           <p className="mt-1 text-sm text-ink/60">
-            Discover your next book
+            {t("discoverBooks")}
           </p>
         </div>
 
-        {/* SCROLLABLE CONTENT */}
+        {/* ==================================================
+            SCROLLABLE CONTENT
+        ================================================== */}
 
         <div className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
 
-          {/* MAIN */}
+          {/* ==================================================
+              MAIN
+          ================================================== */}
 
           <div>
             <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
-              Main
+              {t("main")}
             </p>
+
+            {/* HOME */}
 
             <a
               href="/"
@@ -211,8 +221,10 @@ export default function Sidebar() {
               className="flex items-center gap-3 rounded-xl bg-ink px-3 py-2.5 text-sm font-semibold text-parchment"
             >
               <span>⌂</span>
-              <span>Home</span>
+              <span>{t("home")}</span>
             </a>
+
+            {/* SEARCH */}
 
             <a
               href="/search"
@@ -220,8 +232,10 @@ export default function Sidebar() {
               className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>⌕</span>
-              <span>Search</span>
+              <span>{t("search")}</span>
             </a>
+
+            {/* CATEGORIES */}
 
             <a
               href="/categories"
@@ -229,23 +243,23 @@ export default function Sidebar() {
               className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>▦</span>
-              <span>Categories</span>
+              <span>{t("categories")}</span>
             </a>
           </div>
 
-          {/* LANGUAGE */}
+          {/* ==================================================
+              LANGUAGE
+          ================================================== */}
 
           <div className="mt-6">
             <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
-              Language
+              {t("language")}
             </p>
 
             <button
               type="button"
               onClick={() =>
-                setLanguageOpen(
-                  !languageOpen
-                )
+                setLanguageOpen((current) => !current)
               }
               className="flex w-full items-center justify-between rounded-xl border border-ink/10 px-3 py-2.5 text-sm font-medium transition hover:bg-ink/5"
             >
@@ -272,58 +286,48 @@ export default function Sidebar() {
 
             {languageOpen && (
               <div className="mt-1 rounded-xl border border-ink/10 bg-white p-1 shadow-sm">
-                {languages.map(
-                  (item) => (
-                    <button
-                      key={item.code}
-                      type="button"
-                      onClick={() =>
-                        handleLanguageChange(
-                          item.code
-                        )
-                      }
-                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition ${
-                        language ===
-                        item.code
-                          ? "bg-ink text-parchment"
-                          : "text-ink/70 hover:bg-ink/5"
-                      }`}
-                    >
-                      <span>
-                        {item.flag}
-                      </span>
+                {languages.map((item) => (
+                  <button
+                    key={item.code}
+                    type="button"
+                    onClick={() =>
+                      handleLanguageChange(item.code)
+                    }
+                    className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition ${
+                      language === item.code
+                        ? "bg-ink text-parchment"
+                        : "text-ink/70 hover:bg-ink/5"
+                    }`}
+                  >
+                    <span>{item.flag}</span>
 
-                      <span>
-                        {item.label}
-                      </span>
+                    <span>{item.label}</span>
 
-                      {language ===
-                        item.code && (
-                        <span className="ml-auto">
-                          ✓
-                        </span>
-                      )}
-                    </button>
-                  )
-                )}
+                    {language === item.code && (
+                      <span className="ml-auto">
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
             )}
           </div>
 
-          {/* CATEGORIES */}
+          {/* ==================================================
+              CATEGORIES
+          ================================================== */}
 
           <div className="mt-6">
             <button
               type="button"
               onClick={() =>
-                setCategoriesOpen(
-                  !categoriesOpen
-                )
+                setCategoriesOpen((current) => !current)
               }
               className="flex w-full items-center justify-between px-3 pb-2"
             >
               <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
-                Categories
+                {t("categories")}
               </span>
 
               <span
@@ -341,39 +345,35 @@ export default function Sidebar() {
               <div className="space-y-0.5">
                 <a
                   href="/categories"
-                  onClick={
-                    closeMobileSidebar
-                  }
+                  onClick={closeMobileSidebar}
                   className="block rounded-xl px-3 py-2 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
                 >
-                  All Categories
+                  {t("browseBooks")}
                 </a>
 
-                {categories.map(
-                  (category) => (
-                    <a
-                      key={category}
-                      href={`/categories?category=${encodeURIComponent(
-                        category
-                      )}`}
-                      onClick={
-                        closeMobileSidebar
-                      }
-                      className="block rounded-xl px-3 py-2 text-sm text-ink/60 transition hover:bg-ink/5 hover:text-ink"
-                    >
-                      {category}
-                    </a>
-                  )
-                )}
+                {categories.map((category) => (
+                  <a
+                    key={category}
+                    href={`/categories?category=${encodeURIComponent(
+                      category
+                    )}`}
+                    onClick={closeMobileSidebar}
+                    className="block rounded-xl px-3 py-2 text-sm text-ink/60 transition hover:bg-ink/5 hover:text-ink"
+                  >
+                    {category}
+                  </a>
+                ))}
               </div>
             )}
           </div>
 
-          {/* LIBRARY */}
+          {/* ==================================================
+              LIBRARY
+          ================================================== */}
 
           <div className="mt-6">
             <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
-              Your Library
+              {t("library")}
             </p>
 
             <a
@@ -382,7 +382,7 @@ export default function Sidebar() {
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>▤</span>
-              <span>My Library</span>
+              <span><T k="myLibrary" /></span>
             </a>
 
             <a
@@ -391,7 +391,7 @@ export default function Sidebar() {
               className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>🔖</span>
-              <span>Bookmarks</span>
+              <span><T k="bookmarks" /></span>
             </a>
 
             <a
@@ -400,15 +400,17 @@ export default function Sidebar() {
               className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>◔</span>
-              <span>Reading Progress</span>
+              <span><T k="readingProgress" /></span>
             </a>
           </div>
 
-          {/* ACCOUNT */}
+          {/* ==================================================
+              ACCOUNT
+          ================================================== */}
 
           <div className="mt-6 pb-5">
             <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ink/40">
-              Account
+              {t("account")}
             </p>
 
             <a
@@ -417,21 +419,23 @@ export default function Sidebar() {
               className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-ink/70 transition hover:bg-ink/5 hover:text-ink"
             >
               <span>⚙</span>
-              <span>Settings</span>
+              <span><T k="settings" /></span>
             </a>
           </div>
         </div>
 
-        {/* FOOTER */}
+        {/* ==================================================
+            FOOTER
+        ================================================== */}
 
         <div className="border-t border-ink/10 p-4">
           <div className="rounded-2xl bg-ink px-4 py-4 text-parchment">
             <p className="text-sm font-semibold">
-              Read. Learn. Grow.
+              {t("read")}. {t("learn")}. Grow.
             </p>
 
             <p className="mt-1 text-xs leading-5 text-parchment/60">
-              Discover books and keep your reading journey organized.
+              {t("discoverBooks")}
             </p>
 
             <a
@@ -439,7 +443,7 @@ export default function Sidebar() {
               onClick={closeMobileSidebar}
               className="mt-3 inline-flex text-xs font-semibold underline underline-offset-4"
             >
-              Explore books →
+              {t("browseBooks")} →
             </a>
           </div>
         </div>

@@ -1,3 +1,4 @@
+import T from "./T";
 export default function Footer() {
   return (
     <footer className="mt-4 border-t border-ink/10 py-2 sm:mt-6 sm:py-5">
@@ -7,7 +8,7 @@ export default function Footer() {
         </span>
 
         <span>
-          Discover. Read. Learn.
+          <T k="discover" />. <T k="read" />. <T k="learn" />.
         </span>
 
         <span>
