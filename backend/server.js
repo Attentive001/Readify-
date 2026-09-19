@@ -6,6 +6,7 @@ const path = require("path");
 
 const authRoutes = require("./routes/authRoutes");
 const bookRoutes = require("./routes/bookRoutes");
+const bookmarkRoutes = require("./routes/bookmarkRoutes");
 const authorRoutes = require("./routes/authorRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const searchRoutes = require("./routes/searchRoutes");
@@ -39,6 +40,7 @@ app.use(
 const v1 = express.Router();
 v1.use("/auth", authRoutes);
 v1.use("/books", bookRoutes);
+v1.use("/books", bookmarkRoutes);
 v1.use("/authors", authorRoutes);
 v1.use("/categories", categoryRoutes);
 v1.use("/search", searchRoutes);
